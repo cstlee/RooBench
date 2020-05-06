@@ -1,2 +1,2 @@
 # RooBench
-Benchmark suite for the Roo communcation framework (PlatformLab/Roo)
+Benchmark suite for the Roo communication framework (PlatformLab/Roo)
