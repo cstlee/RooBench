@@ -46,13 +46,13 @@ thread_local Temp temp;
 }  // namespace Test
 
 /**
- * Base class for all Roobench benchmarks
+ * Fake Roobench benchmarks used for testing.
  *
  * Implementations should be thread-safe.
  */
 class FakeBenchmark : public Benchmark {
   public:
-    FakeBenchmark(std::string bench_config, std::string server_name,
+    FakeBenchmark(nlohmann::json bench_config, std::string server_name,
                   std::string output_dir, size_t num_threads)
         : Benchmark(bench_config, server_name, output_dir, num_threads)
         , mutex()

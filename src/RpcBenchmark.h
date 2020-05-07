@@ -13,12 +13,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef ROOBENCH_DPCBENCHMARK_H
-#define ROOBENCH_DPCBENCHMARK_H
+#ifndef ROOBENCH_RPCBENCHMARK_H
+#define ROOBENCH_RPCBENCHMARK_H
 
 #include <Homa/Drivers/DPDK/DpdkDriver.h>
 #include <Homa/Homa.h>
-#include <Roo/Roo.h>
+#include <SimpleRpc/SimpleRpc.h>
 
 #include <array>
 #include <atomic>
@@ -32,22 +32,22 @@ namespace Homa {
 class Driver;
 class Transport;
 }  // namespace Homa
-namespace Roo {
+namespace SimpleRpc {
 class Socket;
-}  // namespace Roo
+}  // namespace SimpleRpc
 
 namespace RooBench {
 
 /**
- * Benchmark for DPC style workloads.
+ * Benchmark for runing RPC style workloads.
  *
  * Implementations should be thread-safe.
  */
-class DpcBenchmark : public Benchmark {
+class RpcBenchmark : public Benchmark {
   public:
-    DpcBenchmark(nlohmann::json bench_config, std::string server_name,
+    RpcBenchmark(nlohmann::json bench_config, std::string server_name,
                  std::string output_dir, size_t num_threads);
-    virtual ~DpcBenchmark();
+    virtual ~RpcBenchmark();
 
   protected:
     /**
@@ -92,12 +92,12 @@ class DpcBenchmark : public Benchmark {
     void server_poll();
     void client_poll();
     Homa::Driver::Address selectServer(int taskType, int index);
-    void dispatch(Roo::unique_ptr<Roo::ServerTask> task);
-    void handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task);
+    void dispatch(SimpleRpc::unique_ptr<SimpleRpc::ServerTask> task);
+    void handleBenchmarkTask(SimpleRpc::unique_ptr<SimpleRpc::ServerTask> task);
 
     const std::unique_ptr<Homa::Driver> driver;
     const std::unique_ptr<Homa::Transport> transport;
-    const std::unique_ptr<Roo::Socket> socket;
+    const std::unique_ptr<SimpleRpc::Socket> socket;
     const std::unordered_map<int, Homa::Driver::Address> server_address_book;
     std::atomic<bool> run;
     std::atomic<bool> run_client;
@@ -110,4 +110,4 @@ class DpcBenchmark : public Benchmark {
 
 }  // namespace RooBench
 
-#endif  // ROOBENCH_DPCBENCHMARK_H
+#endif  // ROOBENCH_RPCBENCHMARK_H

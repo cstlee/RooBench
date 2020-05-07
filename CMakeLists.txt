@@ -60,6 +60,7 @@ add_executable(server
     src/main.cc
     src/Benchmark.cc
     src/DpcBenchmark.cc
+    src/RpcBenchmark.cc
 )
 target_link_libraries(server
     PRIVATE
@@ -67,6 +68,7 @@ target_link_libraries(server
         nlohmann_json::nlohmann_json
         Threads::Threads
         Roo::Roo
+        SimpleRpc::SimpleRpc
         Homa::Homa
         Homa::DpdkDriver
         PerfUtils

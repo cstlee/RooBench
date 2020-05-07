@@ -17,6 +17,7 @@
 #define ROOBENCH_BENCHMARK_H
 
 #include <atomic>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <thread>
 #include <vector>
@@ -32,7 +33,7 @@ namespace RooBench {
  */
 class Benchmark {
   public:
-    Benchmark(std::string bench_config, std::string server_name,
+    Benchmark(nlohmann::json bench_config, std::string server_name,
               std::string output_dir, size_t num_threads);
     virtual ~Benchmark();
     void run();

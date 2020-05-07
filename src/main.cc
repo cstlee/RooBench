@@ -16,24 +16,17 @@
 static const char USAGE[] = R"(RooBench server
 
 Usage:
-    server <bench_type> <server_name> <num_threads> <bench_config> <output_dir>
+    server <server_name> <num_threads> <bench_config> <output_dir>
 
 Options:
     -h --help           Show this screen.
     --version           Show version.
-
-Available Benchmark Types <bench_type>:
-    DPC
-    Fake        Used only for testing the test framework.
 )";
 
 #include <docopt.h>
 
-#include <iostream>
-
 #include "Benchmark.h"
-#include "DpcBenchmark.h"
-#include "FakeBenchmark.h"
+#include "BenchmarkFactory.h"
 
 int
 main(int argc, char* argv[])
@@ -42,28 +35,19 @@ main(int argc, char* argv[])
         docopt::docopt(USAGE, {argv + 1, argv + argc},
                        true,                    // show help if requested
                        "RooBench server 0.1");  // version string
-    std::string bench_type = args["<bench_type>"].asString();
     std::string server_name = args["<server_name>"].asString();
     int num_threads = args["<num_threads>"].asLong();
     std::string bench_config = args["<bench_config>"].asString();
     std::string output_dir_path = args["<output_dir>"].asString();
 
-    RooBench::Benchmark* benchmark;
+    RooBench::Benchmark* benchmark =
+        RooBench::BenchmarkFactory::createBenchmark(
+            bench_config, server_name, output_dir_path, num_threads);
 
-    if (bench_type == "Fake") {
-        benchmark = new RooBench::FakeBenchmark(bench_config, server_name,
-                                                output_dir_path, num_threads);
-    } else if (bench_type == "DPC") {
-        benchmark = new RooBench::DpcBenchmark(bench_config, server_name,
-                                               output_dir_path, num_threads);
-    } else {
-        std::cerr << "Unknown Benchmark type '" << bench_type << "'"
-                  << std::endl;
-        return 0;
+    if (benchmark != nullptr) {
+        benchmark->run();
+        delete benchmark;
     }
 
-    benchmark->run();
-
-    delete benchmark;
     return 0;
 }

@@ -13,10 +13,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "DpcBenchmark.h"
+#include "RpcBenchmark.h"
 
 #include <PerfUtils/Cycles.h>
-#include <Roo/Perf.h>
+#include <SimpleRpc/Perf.h>
 
 #include <fstream>
 #include <functional>
@@ -62,14 +62,14 @@ startDriver()
  * @param num_threads
  *      The number of threads that should be running run_benchmark().
  */
-DpcBenchmark::DpcBenchmark(nlohmann::json bench_config, std::string server_name,
+RpcBenchmark::RpcBenchmark(nlohmann::json bench_config, std::string server_name,
                            std::string output_dir, size_t num_threads)
     : Benchmark(bench_config, server_name, output_dir, num_threads)
     , driver(startDriver())
     , transport(Homa::Transport::create(
           driver.get(), std::hash<std::string>{}(driver->addressToString(
                             driver->getLocalAddress()))))
-    , socket(Roo::Socket::create(transport.get()))
+    , socket(SimpleRpc::Socket::create(transport.get()))
     , server_address_book(create_address_book(config.serverList, driver.get()))
     , run(true)
     , run_client(false)
@@ -84,13 +84,13 @@ DpcBenchmark::DpcBenchmark(nlohmann::json bench_config, std::string server_name,
 /**
  * Default Benchmark destructor.
  */
-DpcBenchmark::~DpcBenchmark() = default;
+RpcBenchmark::~RpcBenchmark() = default;
 
 /**
  * @copydoc Benchmark::run_benchmark()
  */
 void
-DpcBenchmark::run_benchmark()
+RpcBenchmark::run_benchmark()
 {
     while (run) {
         socket->poll();
@@ -103,14 +103,14 @@ DpcBenchmark::run_benchmark()
  * @copydoc Benchmark::dump_stats()
  */
 void
-DpcBenchmark::dump_stats()
+RpcBenchmark::dump_stats()
 {
     static int dump_count = 0;
 
-    // Dump Roo Stats
+    // Dump SimpleRpc Stats
     {
-        Roo::Perf::Stats stats;
-        Roo::Perf::getStats(&stats);
+        SimpleRpc::Perf::Stats stats;
+        SimpleRpc::Perf::getStats(&stats);
         nlohmann::json roo_stats;
         roo_stats["timestamp"] = stats.timestamp;
         roo_stats["cycles_per_second"] = stats.cycles_per_second;
@@ -169,7 +169,7 @@ DpcBenchmark::dump_stats()
  * @copydoc Benchmark::start_client()
  */
 void
-DpcBenchmark::start_client()
+RpcBenchmark::start_client()
 {
     run_client = true;
 }
@@ -178,7 +178,7 @@ DpcBenchmark::start_client()
  * @copydoc Benchmark::stop()
  */
 void
-DpcBenchmark::stop()
+RpcBenchmark::stop()
 {
     run = false;
 }
@@ -186,8 +186,8 @@ DpcBenchmark::stop()
 /**
  * Helper static method to initialize the task_stats map.
  */
-std::unordered_map<int, const std::unique_ptr<DpcBenchmark::TaskStats>>
-DpcBenchmark::create_task_stats_map(const BenchConfig::TaskMap& task_map)
+std::unordered_map<int, const std::unique_ptr<RpcBenchmark::TaskStats>>
+RpcBenchmark::create_task_stats_map(const BenchConfig::TaskMap& task_map)
 {
     std::unordered_map<int, const std::unique_ptr<TaskStats>> task_stats;
     for (auto& elem : task_map) {
@@ -201,19 +201,19 @@ DpcBenchmark::create_task_stats_map(const BenchConfig::TaskMap& task_map)
  * Perform increment work to process incoming ServerTasks
  */
 void
-DpcBenchmark::server_poll()
+RpcBenchmark::server_poll()
 {
-    for (Roo::unique_ptr<Roo::ServerTask> task = socket->receive(); task;
-         task = socket->receive()) {
+    for (SimpleRpc::unique_ptr<SimpleRpc::ServerTask> task = socket->receive();
+         task; task = socket->receive()) {
         dispatch(std::move(task));
     }
 }
 
 /**
- * Perform incremental work to process outgoing client RooPCs
+ * Perform incremental work to process outgoing client SimpleRpc
  */
 void
-DpcBenchmark::client_poll()
+RpcBenchmark::client_poll()
 {
     if (!run_client) {
         return;
@@ -226,10 +226,11 @@ DpcBenchmark::client_poll()
     char buf[1000000];
 
     uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
-    Roo::unique_ptr<Roo::RooPC> rpc = socket->allocRooPC();
     for (const BenchConfig::Client::Phase& phase : config.client.phases) {
+        std::vector<SimpleRpc::unique_ptr<SimpleRpc::Rpc>> rpcs;
         for (const BenchConfig::Request& request_config : phase.requests) {
             for (int i = 0; i < request_config.count; ++i) {
+                SimpleRpc::unique_ptr<SimpleRpc::Rpc> rpc = socket->allocRpc();
                 WireFormat::Benchmark::Request* request =
                     reinterpret_cast<WireFormat::Benchmark::Request*>(buf);
                 request->common.opcode = WireFormat::Benchmark::opcode;
@@ -243,15 +244,19 @@ DpcBenchmark::client_poll()
                     rpc->allocRequest();
                 message->append(buf, request_config.size);
                 rpc->send(dest, std::move(message));
+                rpcs.push_back(std::move(rpc));
             }
         }
-        while (rpc->checkStatus() == Roo::RooPC::Status::IN_PROGRESS) {
-            socket->poll();
-            if (!run_client) {
-                return;
+        for (auto it = rpcs.begin(); it != rpcs.end(); ++it) {
+            SimpleRpc::Rpc* rpc = it->get();
+            while (rpc->checkStatus() == SimpleRpc::Rpc::Status::IN_PROGRESS) {
+                socket->poll();
+                if (!run_client) {
+                    return;
+                }
             }
+            rpc->wait();
         }
-        rpc->wait();
     }
     uint64_t stop_cycles = PerfUtils::Cycles::rdtsc();
 
@@ -268,7 +273,7 @@ DpcBenchmark::client_poll()
 }
 
 Homa::Driver::Address
-DpcBenchmark::selectServer(int taskType, int index)
+RpcBenchmark::selectServer(int taskType, int index)
 {
     index = index % config.tasks.at(taskType).servers.size();
     int server_id = config.tasks.at(taskType).servers.at(index);
@@ -276,7 +281,7 @@ DpcBenchmark::selectServer(int taskType, int index)
 }
 
 void
-DpcBenchmark::dispatch(Roo::unique_ptr<Roo::ServerTask> task)
+RpcBenchmark::dispatch(SimpleRpc::unique_ptr<SimpleRpc::ServerTask> task)
 {
     WireFormat::Common common;
     task->getRequest()->get(0, &common, sizeof(common));
@@ -291,7 +296,8 @@ DpcBenchmark::dispatch(Roo::unique_ptr<Roo::ServerTask> task)
 }
 
 void
-DpcBenchmark::handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task)
+RpcBenchmark::handleBenchmarkTask(
+    SimpleRpc::unique_ptr<SimpleRpc::ServerTask> task)
 {
     WireFormat::Benchmark::Request request;
     task->getRequest()->get(0, &request, sizeof(request));
@@ -299,32 +305,14 @@ DpcBenchmark::handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task)
 
     char buf[1000000];
 
-    for (const BenchConfig::Request& request_config : task_config.requests) {
-        for (int i = 0; i < request_config.count; ++i) {
-            WireFormat::Benchmark::Request* request =
-                reinterpret_cast<WireFormat::Benchmark::Request*>(buf);
-            request->common.opcode = WireFormat::Benchmark::opcode;
-            request->taskType = request_config.taskId;
-            Homa::Driver::Address dest = selectServer(request_config.taskId, i);
-            assert(request_config.size >=
-                   sizeof(WireFormat::Benchmark::Request));
-            assert(request_config.size <= sizeof(buf));
-            Homa::unique_ptr<Homa::OutMessage> message =
-                task->allocOutMessage();
-            message->append(buf, request_config.size);
-            task->delegate(dest, std::move(message));
-        }
-    }
-
-    for (const BenchConfig::Response& response_config : task_config.responses) {
-        for (int i = 0; i < response_config.count; ++i) {
-            assert(response_config.size <= sizeof(buf));
-            Homa::unique_ptr<Homa::OutMessage> message =
-                task->allocOutMessage();
-            message->append(buf, response_config.size);
-            task->reply(std::move(message));
-        }
-    }
+    // Only one response is supported.  Take the first one if multiple are
+    // configured.
+    const BenchConfig::Response& response_config =
+        task_config.responses.front();
+    assert(response_config.size <= sizeof(buf));
+    Homa::unique_ptr<Homa::OutMessage> message = task->allocOutMessage();
+    message->append(buf, response_config.size);
+    task->reply(std::move(message));
 
     // Update stats
     task_stats.at(request.taskType)

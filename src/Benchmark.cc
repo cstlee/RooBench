@@ -19,31 +19,14 @@
 
 #include <fstream>
 #include <iostream>
-#include <nlohmann/json.hpp>
 
 namespace RooBench {
-
-namespace {
-
-/**
- * Helper fucntion to load configuration file
- */
-nlohmann::json
-load_config(std::string bench_config)
-{
-    std::ifstream i(bench_config);
-    nlohmann::json config;
-    i >> config;
-    return config;
-}
-
-}  // namespace
 
 /**
  * Benchmark constructor
  *
  * @param bench_config
- *      Path to benchmark configuration file.
+ *      Structure containing the benchmark configuration.
  * @param server_name
  *      Name of the server node running this benchmark instance.
  * @param output_dir
@@ -51,11 +34,11 @@ load_config(std::string bench_config)
  * @param num_threads
  *      The number of threads that should be running run_benchmark().
  */
-Benchmark::Benchmark(std::string bench_config, std::string server_name,
+Benchmark::Benchmark(nlohmann::json bench_config, std::string server_name,
                      std::string output_dir, size_t num_threads)
     : server_name(server_name)
     , output_dir(output_dir)
-    , config(load_config(bench_config))
+    , config(bench_config)
     , num_threads(num_threads)
     , benchmark_threads()
 {}

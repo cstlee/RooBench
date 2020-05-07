@@ -43,7 +43,6 @@ def main(args):
     with open(os.path.expanduser(args["<config_file>"])) as f:
         config = json.load(f)
     server_bin = os.path.expanduser(config["bin_dir"]) + '/server'
-    bench_type = config["bench_type"]
     num_threads = config["num_threads"]
     bench_config = os.path.expanduser(config["bench_config"])
 
@@ -64,7 +63,6 @@ def main(args):
         outlog = open(output_dir + '/' + server_name + '.out.log', 'w')
         errlog = open(output_dir + '/' + server_name + '.err.log', 'w')
         p = subprocess.Popen([server_bin,
-                              bench_type,
                               server_name,
                               num_threads,
                               bench_config,
