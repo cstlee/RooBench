@@ -54,6 +54,8 @@ if(NOT json_POPULATED)
   add_subdirectory(${json_SOURCE_DIR} ${json_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
+add_subdirectory(SimpleRpc)
+
 add_executable(server
     src/main.cc
     src/Benchmark.cc
