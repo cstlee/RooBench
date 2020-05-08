@@ -1,0 +1,77 @@
+{
+    "bench_type": "DPC",
+    "description": "DPC Ring with 4 hop",
+    "client": {
+        "phases": [
+            {
+                "requests": [
+                    {
+                        "task_id": 1,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            }
+        ],
+        "servers": [
+            1
+        ]
+    },
+    "tasks": [
+        {
+            "id": 1,
+            "requests": [
+                {
+                    "task_id": 2,
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "responses": [],
+            "servers": [
+                2
+            ]
+        },
+        {
+            "id": 2,
+            "requests": [
+                {
+                    "task_id": 3,
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "responses": [],
+            "servers": [
+                3
+            ]
+        },
+        {
+            "id": 3,
+            "requests": [
+                {
+                    "task_id": 4,
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "responses": [],
+            "servers": [
+                4
+            ]
+        },
+        {
+            "id": 4,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                5
+            ]
+        }
+    ]
+}

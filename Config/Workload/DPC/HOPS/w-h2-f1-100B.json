@@ -1,0 +1,49 @@
+{
+    "bench_type": "DPC",
+    "description": "DPC Ring with 2 hop",
+    "client": {
+        "phases": [
+            {
+                "requests": [
+                    {
+                        "task_id": 1,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            }
+        ],
+        "servers": [
+            1
+        ]
+    },
+    "tasks": [
+        {
+            "id": 1,
+            "requests": [
+                {
+                    "task_id": 2,
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "responses": [],
+            "servers": [
+                2
+            ]
+        },
+        {
+            "id": 2,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                3
+            ]
+        }
+    ]
+}

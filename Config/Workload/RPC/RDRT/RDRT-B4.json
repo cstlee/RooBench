@@ -1,0 +1,100 @@
+{
+    "bench_type": "RPC",
+    "description": "Remote Distributed Ray Tracing with 4 Bounce",
+    "client": {
+        "phases": [
+            {
+                "requests": [
+                    {
+                        "task_id": 1,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 0,
+                        "size": 100,
+                        "count": 1
+                    },
+                    {
+                        "task_id": 1,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 0,
+                        "size": 100,
+                        "count": 1
+                    },
+                    {
+                        "task_id": 1,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 0,
+                        "size": 100,
+                        "count": 1
+                    },
+                    {
+                        "task_id": 1,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 0,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            }
+        ],
+        "servers": [
+            1
+        ]
+    },
+    "tasks": [
+        {
+            "id": 1,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                3
+            ]
+        },
+        {
+            "id": 0,
+            "desc": "shadow ray",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                2
+            ]
+        }
+    ]
+}

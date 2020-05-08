@@ -1,0 +1,58 @@
+{
+    "bench_type": "DPC",
+    "description": "DPC 2 hops with fan out of 6 at intermediate node",
+    "client": {
+        "phases": [
+            {
+                "requests": [
+                    {
+                        "task_id": 1,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            }
+        ],
+        "servers": [
+            1
+        ]
+    },
+    "tasks": [
+        {
+            "id": 1,
+            "requests": [
+                {
+                    "task_id": 2,
+                    "size": 100,
+                    "count": 6
+                }
+            ],
+            "responses": [],
+            "servers": [
+                2
+            ]
+        },
+        {
+            "id": 2,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12
+            ]
+        }
+    ]
+}

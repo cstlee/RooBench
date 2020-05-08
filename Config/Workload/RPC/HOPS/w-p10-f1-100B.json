@@ -1,0 +1,233 @@
+{
+    "bench_type": "RPC",
+    "description": "RPC with 10 phase",
+    "client": {
+        "phases": [
+            {
+                "requests": [
+                    {
+                        "task_id": 1,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 2,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 3,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 4,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 5,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 6,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 7,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 8,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 9,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 10,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
+            }
+        ],
+        "servers": [
+            1
+        ]
+    },
+    "tasks": [
+        {
+            "id": 1,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                2
+            ]
+        },
+        {
+            "id": 2,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                3
+            ]
+        },
+        {
+            "id": 3,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                4
+            ]
+        },
+        {
+            "id": 4,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                5
+            ]
+        },
+        {
+            "id": 5,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                6
+            ]
+        },
+        {
+            "id": 6,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                7
+            ]
+        },
+        {
+            "id": 7,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                8
+            ]
+        },
+        {
+            "id": 8,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                9
+            ]
+        },
+        {
+            "id": 9,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                10
+            ]
+        },
+        {
+            "id": 10,
+            "requests": [],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                11
+            ]
+        }
+    ]
+}

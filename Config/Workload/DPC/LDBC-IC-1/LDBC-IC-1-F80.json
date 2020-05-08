@@ -1,0 +1,218 @@
+{
+    "bench_type": "DPC",
+    "description": "LDBC IC 1 with 80 friends per person with 10% Hit Rate",
+    "client": {
+        "phases": [
+            {
+                "requests": [
+                    {
+                        "task_id": 6,
+                        "size": 8,
+                        "count": 1
+                    }
+                ]
+            }
+        ],
+        "servers": [
+            1
+        ]
+    },
+    "tasks": [
+        {
+            "id": 6,
+            "desc": "start person get_friends_list()",
+            "requests": [
+                {
+                    "task_id": 5,
+                    "size": 8,
+                    "count": 8
+                },
+                {
+                    "task_id": 4,
+                    "size": 8,
+                    "count": 72
+                }
+            ],
+            "response": [],
+            "servers": [
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+            ]
+        },
+        {
+            "id": 5,
+            "desc": "friends get_friends_list() + get_match(match)",
+            "requests": [
+                {
+                    "task_id": 3,
+                    "size": 8,
+                    "count": 8
+                },
+                {
+                    "task_id": 2,
+                    "size": 8,
+                    "count": 72
+                }
+            ],
+            "responses": [
+                {
+                    "size": 200,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+            ]
+        },
+        {
+            "id": 4,
+            "desc": "friends get_friends_list() + get_match(!match)",
+            "requests": [
+                {
+                    "task_id": 3,
+                    "size": 8,
+                    "count": 8
+                },
+                {
+                    "task_id": 2,
+                    "size": 8,
+                    "count": 72
+                }
+            ],
+            "response": [],
+            "servers": [
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+            ]
+        },
+        {
+            "id": 3,
+            "desc": "friends of friends get_friends_list() + get_match(match)",
+            "requests": [
+                {
+                    "task_id": 1,
+                    "size": 8,
+                    "count": 8
+                },
+                {
+                    "task_id": 0,
+                    "size": 8,
+                    "count": 72
+                }
+            ],
+            "responses": [
+                {
+                    "size": 200,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+            ]
+        },
+        {
+            "id": 2,
+            "desc": "friends of friends get_friends_list() + get_match(!match)",
+            "requests": [
+                {
+                    "task_id": 1,
+                    "size": 8,
+                    "count": 8
+                },
+                {
+                    "task_id": 0,
+                    "size": 8,
+                    "count": 72
+                }
+            ],
+            "response": [],
+            "servers": [
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+            ]
+        },
+        {
+            "id": 1,
+            "desc": "friends of friends of friends get_profile(match)",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 200,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+            ]
+        },
+        {
+            "id": 0,
+            "desc": "friends of friends of friends get_profile(!match)",
+            "requests": [],
+            "responses": [],
+            "servers": [
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11
+            ]
+        }
+    ]
+}
