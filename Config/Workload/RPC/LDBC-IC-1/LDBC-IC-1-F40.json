@@ -64,7 +64,7 @@
             "id": 6,
             "desc": "start person get_friends_list()",
             "requests": [],
-            "response": [
+            "responses": [
                 {
                     "size": 320,
                     "count": 1
@@ -110,7 +110,7 @@
             "id": 4,
             "desc": "friends get_friends_list() + get_match(!match)",
             "requests": [],
-            "response": [
+            "responses": [
                 {
                     "size": 320,
                     "count": 1
@@ -156,7 +156,7 @@
             "id": 2,
             "desc": "friends of friends get_friends_list() + get_match(!match)",
             "requests": [],
-            "response": [
+            "responses": [
                 {
                     "size": 320,
                     "count": 1
@@ -202,7 +202,12 @@
             "id": 0,
             "desc": "friends of friends of friends get_profile(!match)",
             "requests": [],
-            "responses": [],
+            "responses": [
+                {
+                    "size": 0,
+                    "count": 1
+                }
+            ],
             "servers": [
                 2,
                 3,
