@@ -92,6 +92,7 @@ SocketImpl::poll()
             // Incoming message is a request.
             Proto::RequestHeader header;
             message->get(0, &header, sizeof(header));
+            Perf::counters.rx_message_bytes.add(message->length());
             ServerTaskImpl* task =
                 new ServerTaskImpl(this, &header, std::move(message));
             pendingTasks.push_back(task);
@@ -99,6 +100,7 @@ SocketImpl::poll()
             // Incoming message is a response
             Proto::ResponseHeader header;
             message->get(0, &header, sizeof(header));
+            Perf::counters.rx_message_bytes.add(message->length());
             SpinLock::Lock lock_socket(mutex);
             auto it = rpcs.find(header.rpcId);
             if (it != rpcs.end()) {
@@ -115,8 +117,7 @@ SocketImpl::poll()
     // Track cycles spent processing incoming messages.
     uint64_t elapsed_cycles = PerfUtils::Cycles::rdtsc() - start_tsc;
     if (!idle) {
-        Perf::threadCounters.active_cycles.fetch_add(elapsed_cycles,
-                                                     std::memory_order_relaxed);
+        Perf::counters.active_cycles.add(elapsed_cycles);
     }
 
     // Check detached ServerTasks

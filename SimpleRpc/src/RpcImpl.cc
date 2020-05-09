@@ -16,6 +16,7 @@
 #include "RpcImpl.h"
 
 #include "Debug.h"
+#include "Perf.h"
 #include "SocketImpl.h"
 
 namespace SimpleRpc {
@@ -63,6 +64,7 @@ RpcImpl::send(Homa::Driver::Address destination,
         replyAddress, &outboundHeader.replyAddress);
     request->prepend(&outboundHeader, sizeof(outboundHeader));
 
+    Perf::counters.tx_message_bytes.add(request->length());
     request->send(destination);
 }
 

@@ -16,6 +16,7 @@
 #include "ServerTaskImpl.h"
 
 #include "Debug.h"
+#include "Perf.h"
 #include "SocketImpl.h"
 
 namespace SimpleRpc {
@@ -78,6 +79,7 @@ ServerTaskImpl::reply(Homa::unique_ptr<Homa::OutMessage> message)
 {
     Proto::ResponseHeader header(rpcId);
     message->prepend(&header, sizeof(header));
+    Perf::counters.tx_message_bytes.add(message->length());
     message->send(replyAddress);
     response = std::move(message);
 }
