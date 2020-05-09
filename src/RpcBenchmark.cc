@@ -111,16 +111,34 @@ RpcBenchmark::dump_stats()
     {
         SimpleRpc::Perf::Stats stats;
         SimpleRpc::Perf::getStats(&stats);
-        nlohmann::json roo_stats;
-        roo_stats["timestamp"] = stats.timestamp;
-        roo_stats["cycles_per_second"] = stats.cycles_per_second;
-        roo_stats["active_cycles"] = stats.active_cycles;
+        nlohmann::json rpc_stats;
+        rpc_stats["timestamp"] = stats.timestamp;
+        rpc_stats["cycles_per_second"] = stats.cycles_per_second;
+        rpc_stats["active_cycles"] = stats.active_cycles;
+        rpc_stats["transport_tx_bytes"] = stats.transport_tx_bytes;
+        rpc_stats["transport_rx_bytes"] = stats.transport_rx_bytes;
+        rpc_stats["tx_data_pkts"] = stats.tx_data_pkts;
+        rpc_stats["rx_data_pkts"] = stats.rx_data_pkts;
+        rpc_stats["tx_grant_pkts"] = stats.tx_grant_pkts;
+        rpc_stats["rx_grant_pkts"] = stats.rx_grant_pkts;
+        rpc_stats["tx_done_pkts"] = stats.tx_done_pkts;
+        rpc_stats["rx_done_pkts"] = stats.rx_done_pkts;
+        rpc_stats["tx_resend_pkts"] = stats.tx_resend_pkts;
+        rpc_stats["rx_resend_pkts"] = stats.rx_resend_pkts;
+        rpc_stats["tx_busy_pkts"] = stats.tx_busy_pkts;
+        rpc_stats["rx_busy_pkts"] = stats.rx_busy_pkts;
+        rpc_stats["tx_ping_pkts"] = stats.tx_ping_pkts;
+        rpc_stats["rx_ping_pkts"] = stats.rx_ping_pkts;
+        rpc_stats["tx_unknown_pkts"] = stats.tx_unknown_pkts;
+        rpc_stats["rx_unknown_pkts"] = stats.rx_unknown_pkts;
+        rpc_stats["tx_error_pkts"] = stats.tx_error_pkts;
+        rpc_stats["rx_error_pkts"] = stats.rx_error_pkts;
 
-        std::string roo_stats_outfile_name =
+        std::string rpc_stats_outfile_name =
             output_dir + "/" + server_name + "_transport_stats_" +
             std::to_string(dump_count) + ".json";
-        std::ofstream outfile(roo_stats_outfile_name);
-        outfile << roo_stats.dump();
+        std::ofstream outfile(rpc_stats_outfile_name);
+        outfile << rpc_stats.dump();
     }
 
     // Dump Bench Stats

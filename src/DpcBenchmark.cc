@@ -115,6 +115,24 @@ DpcBenchmark::dump_stats()
         roo_stats["timestamp"] = stats.timestamp;
         roo_stats["cycles_per_second"] = stats.cycles_per_second;
         roo_stats["active_cycles"] = stats.active_cycles;
+        roo_stats["transport_tx_bytes"] = stats.transport_tx_bytes;
+        roo_stats["transport_rx_bytes"] = stats.transport_rx_bytes;
+        roo_stats["tx_data_pkts"] = stats.tx_data_pkts;
+        roo_stats["rx_data_pkts"] = stats.rx_data_pkts;
+        roo_stats["tx_grant_pkts"] = stats.tx_grant_pkts;
+        roo_stats["rx_grant_pkts"] = stats.rx_grant_pkts;
+        roo_stats["tx_done_pkts"] = stats.tx_done_pkts;
+        roo_stats["rx_done_pkts"] = stats.rx_done_pkts;
+        roo_stats["tx_resend_pkts"] = stats.tx_resend_pkts;
+        roo_stats["rx_resend_pkts"] = stats.rx_resend_pkts;
+        roo_stats["tx_busy_pkts"] = stats.tx_busy_pkts;
+        roo_stats["rx_busy_pkts"] = stats.rx_busy_pkts;
+        roo_stats["tx_ping_pkts"] = stats.tx_ping_pkts;
+        roo_stats["rx_ping_pkts"] = stats.rx_ping_pkts;
+        roo_stats["tx_unknown_pkts"] = stats.tx_unknown_pkts;
+        roo_stats["rx_unknown_pkts"] = stats.rx_unknown_pkts;
+        roo_stats["tx_error_pkts"] = stats.tx_error_pkts;
+        roo_stats["rx_error_pkts"] = stats.rx_error_pkts;
 
         std::string roo_stats_outfile_name =
             output_dir + "/" + server_name + "_transport_stats_" +
@@ -295,7 +313,8 @@ DpcBenchmark::handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task)
 {
     WireFormat::Benchmark::Request request;
     task->getRequest()->get(0, &request, sizeof(request));
-    const BenchConfig::Task& task_config = config.tasks.at(request.taskType);
+    const int taskId = request.taskType;
+    const BenchConfig::Task& task_config = config.tasks.at(taskId);
 
     char buf[1000000];
 
@@ -326,9 +345,11 @@ DpcBenchmark::handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task)
         }
     }
 
+    // Done with the task;
+    task.reset();
+
     // Update stats
-    task_stats.at(request.taskType)
-        ->count.fetch_add(1, std::memory_order_relaxed);
+    task_stats.at(taskId)->count.fetch_add(1, std::memory_order_relaxed);
 }
 
 }  // namespace RooBench
