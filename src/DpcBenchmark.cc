@@ -115,6 +115,8 @@ DpcBenchmark::dump_stats()
         roo_stats["timestamp"] = stats.timestamp;
         roo_stats["cycles_per_second"] = stats.cycles_per_second;
         roo_stats["active_cycles"] = stats.active_cycles;
+        roo_stats["tx_message_bytes"] = stats.tx_message_bytes;
+        roo_stats["rx_message_bytes"] = stats.rx_message_bytes;
         roo_stats["transport_tx_bytes"] = stats.transport_tx_bytes;
         roo_stats["transport_rx_bytes"] = stats.transport_rx_bytes;
         roo_stats["tx_data_pkts"] = stats.tx_data_pkts;

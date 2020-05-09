@@ -115,6 +115,8 @@ RpcBenchmark::dump_stats()
         rpc_stats["timestamp"] = stats.timestamp;
         rpc_stats["cycles_per_second"] = stats.cycles_per_second;
         rpc_stats["active_cycles"] = stats.active_cycles;
+        rpc_stats["tx_message_bytes"] = stats.tx_message_bytes;
+        rpc_stats["rx_message_bytes"] = stats.rx_message_bytes;
         rpc_stats["transport_tx_bytes"] = stats.transport_tx_bytes;
         rpc_stats["transport_rx_bytes"] = stats.transport_rx_bytes;
         rpc_stats["tx_data_pkts"] = stats.tx_data_pkts;
