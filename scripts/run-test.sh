@@ -32,30 +32,23 @@ function remote_setup {
     "
 }
 
-function remote_launch {
-    local REMOTE=$1
-    local CMD=
-    local OUT_PREFIX=$3
-    ssh $REMOTE "nohup $CMD > $OUT_PREFIX.out.log 2> $OUT_PREFIX.err.log < /dev/null &"
-}
-
 DATE_TIME=$(date +"%F-%H-%M-%S")
 
 # Setup local log directories
 mkdir -p $LOG_DIR
 LOG_DIR=$(cd $LOG_DIR; pwd)
 mkdir -p "$LOG_DIR/$DATE_TIME"
-ln -sFfh "$LOG_DIR/$DATE_TIME" "$LOG_DIR/latest"
+# ln -sFfh "$LOG_DIR/$DATE_TIME" "$LOG_DIR/latest"
 
 # Save configs
 cp $SERVER_CONFIG $LOG_DIR/$DATE_TIME/ServerConfig.json
 cp $BENCH_CONFIG $LOG_DIR/$DATE_TIME/BenchConfig.json
 
 # Upload configs
-REMOTE=${HOSTS[0]}
-ssh $REMOTE "mkdir -p $REMOTE_CONFIG_DIR"
-scp $SERVER_CONFIG $REMOTE:$REMOTE_CONFIG_DIR/ServerConfig.json
-scp $BENCH_CONFIG $REMOTE:$REMOTE_CONFIG_DIR/BenchConfig.json
+# REMOTE=${HOSTS[0]}
+# ssh $REMOTE "mkdir -p $REMOTE_CONFIG_DIR"
+# scp $SERVER_CONFIG $REMOTE:$REMOTE_CONFIG_DIR/ServerConfig.json
+# scp $BENCH_CONFIG $REMOTE:$REMOTE_CONFIG_DIR/BenchConfig.json
 
 # Remote setup
 SERVER_ID=1
