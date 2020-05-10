@@ -90,7 +90,7 @@ do
     let "SERVER_ID++"
 done
 
-sleep 10
+sleep 30
 
 ##### Dump stats
 SERVER_ID=1
