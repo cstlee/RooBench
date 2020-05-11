@@ -115,6 +115,17 @@ do
     let "SERVER_ID++"
 done
 
+##### Stop Servers
+SERVER_ID=1
+for HOST in ${HOSTS[@]}
+do
+    echo "Kill Server $SERVER_ID on $HOST"
+    ssh $HOST "
+        sudo pkill -f server
+    "
+    let "SERVER_ID++"
+done
+
 ##### Collect Logs
 SERVER_ID=1
 for HOST in ${HOSTS[@]}
