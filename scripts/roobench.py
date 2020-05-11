@@ -38,6 +38,9 @@ if __name__ == '__main__':
     elif args['<command>'] == 'server':
         import roobench_server
         roobench_server.main(docopt(roobench_server.__doc__, argv=argv))
+    elif args['<command>'] == 'stats':
+        import roobench_stats
+        roobench_stats.main(docopt(roobench_stats.__doc__, argv=argv))
     else:
         exit("%r is not a roobench.py command. See 'roobench help'."
              % args['<command>'])
