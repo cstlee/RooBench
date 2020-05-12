@@ -15,7 +15,10 @@
 
 #include "RpcBenchmark.h"
 
+#include <Homa/Debug.h>
 #include <PerfUtils/Cycles.h>
+#include <PerfUtils/TimeTrace.h>
+#include <SimpleRpc/Debug.h>
 #include <SimpleRpc/Perf.h>
 
 #include <fstream>
@@ -78,6 +81,9 @@ RpcBenchmark::RpcBenchmark(nlohmann::json bench_config, std::string server_name,
     , client_stats()
     , task_stats(create_task_stats_map(config.tasks))
 {
+    Homa::Debug::setLogPolicy(Homa::Debug::logPolicyFromString("ERROR"));
+    SimpleRpc::Debug::setLogPolicy(
+        SimpleRpc::Debug::logPolicyFromString("ERROR"));
     client_running.clear();
 }
 
@@ -164,7 +170,7 @@ RpcBenchmark::dump_stats()
         client_stats_json["count"] = client_stats.count.load();
         uint64_t max_sample_index =
             client_stats.sample_count.load() & SAMPLE_INDEX_MASK;
-        std::vector<int> latencies;
+        std::vector<uint> latencies;
         for (uint64_t i = 0; i <= max_sample_index; ++i) {
             latencies.push_back(
                 PerfUtils::Cycles::toNanoseconds(client_stats.samples.at(i)));
@@ -182,6 +188,13 @@ RpcBenchmark::dump_stats()
         std::ofstream outfile(bench_stats_outfile_name);
         outfile << bench_stats_json.dump();
     }
+
+    // Dump time trace
+    std::string ttlogname = output_dir + "/" + server_name + "_tt_" +
+                            std::to_string(dump_count) + ".log";
+    PerfUtils::TimeTrace::setOutputFileName(ttlogname.c_str());
+    PerfUtils::TimeTrace::print();
+
     dump_count++;
 }
 
