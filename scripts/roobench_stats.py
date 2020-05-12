@@ -16,10 +16,15 @@
 
 """
 Usage:
-    roobench.py stats <data_dir>
+    roobench.py stats [options] <data_dir>
 
 Options:
     -h, --help              Show this screen.
+    -l, --latency           Output Latency Stats
+    -n, --network           Output Network Usage Stats
+    -c, --cpu               Output CPU Usage Stats
+    -p, --packet            Output Packet Stats
+    -t, --task              Output Task Stats
 """
 
 import glob
@@ -242,19 +247,37 @@ def main(args):
         transport_stats[server_name] = get_transport_stats(args['<data_dir>'], server_name)
         bench_stats[server_name] = get_bench_stats(args['<data_dir>'], server_name)
 
-    print_latency(bench_stats["server-1"])
-    print ""
-    print_cpu_usage_stats(server_names, bench_stats, transport_stats)
-    print ""
-    print_net_usage(server_names, bench_stats, transport_stats)
-    print ""
-    print_packet_stats_header()
-    for server_name in server_names: 
-        print_packet_stats(server_name, transport_stats[server_name])
-    print ""
-    print_task_stats_header(bench_stats["server-1"])
-    for server_name in server_names: 
-        print_task_stats(server_name, bench_stats[server_name])
+    flags_set = 0
+    for flag in ('--cpu', '--latency', '--network', '--packet', '--task'):
+        if args[flag]:
+            flags_set += 1
+    if flags_set > 0:
+        print_all = False
+    else:
+        print_all = True
+
+    if (print_all or args['--latency']):
+        print_latency(bench_stats["server-1"])
+        print ""
+    
+    if (print_all or args['--cpu']):
+        print_cpu_usage_stats(server_names, bench_stats, transport_stats)
+        print ""
+    
+    if (print_all or args['--network']):
+        print_net_usage(server_names, bench_stats, transport_stats)
+        print ""
+    if (print_all or args['--packet']):
+        print_packet_stats_header()
+        for server_name in server_names: 
+            print_packet_stats(server_name, transport_stats[server_name])
+        print ""
+    
+    if (print_all or args['--task']):
+        print_task_stats_header(bench_stats["server-1"])
+        for server_name in server_names: 
+            print_task_stats(server_name, bench_stats[server_name])
+        print ""
 
 if __name__ == '__main__':
     args = docopt(__doc__)
