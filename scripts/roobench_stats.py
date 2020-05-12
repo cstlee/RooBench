@@ -109,23 +109,73 @@ def print_latency(bench_stats):
     print " Med (us)  Min (us)  90% (us)  99% (us) "
     print "%8.3f  %8.3f  %8.3f  %8.3f" % (latency_med, latency_min, latency_90, latency_99)
 
-def print_usage_stats_header():
-    print "Usage statistics:"
-    print "-----------------"
-    print "          " + \
-          "   Active (c)" + \
-          "   Msg TX (B)" + \
-          "   Msg RX (B)" + \
-          " Total TX (B)" + \
-          " Total RX (B)"
+def print_net_usage(server_names, bench_stats, transport_stats):
+    count = bench_stats['server-1']['client_count']
+    print "Network Usage Statistics:"
+    print "-------------------------"
+    h1 = "               Application                " + \
+         "                Transport                 "
+    h1_ = " -----------------------------------------"
+    h2 = "   per iter   " + \
+         "     Tput     " + \
+         "     Total    "
+    h2_2 = "    (Byte)    " + \
+          "    (Mbps)    " + \
+          "     (MB)     "
+    h2_ = " -------------" + \
+          " -------------" + \
+          " -------------"
+    h3 = '   TX     RX  '
+    s = '          '
+    print s + h1
+    print s + h1_ + h1_
+    print s + h2 + h2
+    print s + h2_2 + h2_2
+    print s + h2_ + h2_
+    print s + h3 + h3 + h3 + h3 + h3 + h3
+    for server_name in server_names:
+        duration = transport_stats[server_name]['elapsed_time']
+        tx_msg = transport_stats[server_name]['tx_message_bytes']
+        rx_msg = transport_stats[server_name]['rx_message_bytes']
+        tx_tran = transport_stats[server_name]['transport_tx_bytes']
+        rx_tran = transport_stats[server_name]['transport_rx_bytes']
+        app_iter = " %6d %6d" % (tx_msg / count, rx_msg / count)
+        tran_iter = " %6d %6d" % (tx_tran / count, rx_tran / count)
+        app_Tput = " %6.1f %6.1f" % (8 * tx_msg / (1000000.0 * duration), 8 * rx_msg / (1000000.0 * duration))
+        tran_Tput = " %6.1f %6.1f" % (8 * tx_tran / (1000000.0 * duration), 8 * rx_tran / (1000000.0 * duration))
+        app_Tot = " %6.1f %6.1f" % (tx_msg / (1000000.0), rx_msg / (1000000.0))
+        tran_Tot = " %6.1f %6.1f" % (tx_tran / (1000000.0), rx_tran / (1000000.0))
+        print server_name.rjust(10, ' ') + app_iter + app_Tput + app_Tot + tran_iter + tran_Tput + tran_Tot
 
-def print_usage_stats(server_name, transport_stats):
-    print server_name.rjust(10, ' ') + \
-          "%13d" % transport_stats["active_cycles"] + \
-          "%13d" % transport_stats["tx_message_bytes"] + \
-          "%13d" % transport_stats["rx_message_bytes"] + \
-          "%13d" % transport_stats["transport_tx_bytes"] + \
-          "%13d" % transport_stats["transport_rx_bytes"]
+def print_cpu_usage_stats(server_names, bench_stats, transport_stats):
+    count = bench_stats['server-1']['client_count']
+    print "CPU Usage Statistics:"
+    print "---------------------"
+    h1 = "              Active Cycles               "
+    h1_ = " -----------------------------------------"
+    h2 = "   per iter   " + \
+         "   CPU Load   " + \
+         "     Total    "
+    h2_2 = "   (cycles)   " + \
+          "   (1 core)   " + \
+          "   (cycles)   "
+    h2_ = " -------------" + \
+          " -------------" + \
+          " -------------"
+    s = '          '
+    print s + h1
+    print s + h1_
+    print s + h2
+    print s + h2_2
+    print s + h2_
+    for server_name in server_names:
+        cycles = transport_stats[server_name]['active_cycles']
+        cps = transport_stats[server_name]['cycles_per_second']
+        duration = transport_stats[server_name]['elapsed_time']
+        print server_name.rjust(10, ' ') + \
+            " %12d " % (cycles / count) + \
+            " %12.3f " % ((cycles / cps) / duration) + \
+            " %12d " % (cycles)
 
 def print_task_stats_header(bench_stats):
     print "Task statistics:"
@@ -194,9 +244,9 @@ def main(args):
 
     print_latency(bench_stats["server-1"])
     print ""
-    print_usage_stats_header()
-    for server_name in server_names: 
-        print_usage_stats(server_name, transport_stats[server_name])
+    print_cpu_usage_stats(server_names, bench_stats, transport_stats)
+    print ""
+    print_net_usage(server_names, bench_stats, transport_stats)
     print ""
     print_packet_stats_header()
     for server_name in server_names: 
