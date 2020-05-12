@@ -47,6 +47,15 @@
                         "count": 1
                     }
                 ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 6,
+                        "size": 100,
+                        "count": 1
+                    }
+                ]
             }
         ],
         "servers": [
