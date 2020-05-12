@@ -30,6 +30,7 @@ Options:
 import glob
 import os
 import json
+import numpy as np
 
 def stat_diff(stat_name, start_data, end_data):
     return end_data[stat_name] - start_data[stat_name];
@@ -182,20 +183,41 @@ def print_cpu_usage_stats(server_names, bench_stats, transport_stats):
             " %12.3f " % ((cycles / cps) / duration) + \
             " %12d " % (cycles)
 
-def print_task_stats_header(bench_stats):
+def print_task_stats(server_names, bench_stats):
     print "Task statistics:"
     print "----------------"
     header = "         "
+    header_ = header
     header += "       C"
-    for task_id in bench_stats["task_stats"]:
+    header_ += " -------"
+    total = [0,]
+    for task_id in bench_stats['server-1']["task_stats"]:
         header += ("T(%d)" % task_id).rjust(8, ' ')
+        header_ += " -------"
+        total.append(0)
+    total = np.array(total) 
     print header
-
-def print_task_stats(server_name, bench_stats):
-    stats_line = server_name.rjust(9, ' ')
-    stats_line += "%8d" % bench_stats['client_count'] 
-    for task_id in bench_stats["task_stats"]:
-        stats_line += "%8d" % bench_stats['task_stats'][task_id] 
+    print header_
+    for server_name in server_names: 
+        stats_line = server_name.rjust(9, ' ')
+        client_count = bench_stats[server_name]['client_count']
+        stats_line += " %7d" % client_count
+        server_stat = [client_count, ] 
+        for task_id in bench_stats[server_name]["task_stats"]:
+            task_count = bench_stats[server_name]['task_stats'][task_id]
+            stats_line += " %7d" % task_count 
+            server_stat.append(task_count)
+        total += np.array(server_stat)
+        print stats_line
+    print header_
+    norm = total / float(total[0])
+    stats_line = "    Total"
+    for stat in total:
+        stats_line += " %7d" % stat 
+    print stats_line
+    stats_line = "Normalize"
+    for stat in norm:
+        stats_line += " %7d" % round(stat) 
     print stats_line
 
 def print_packet_stats_header():
@@ -274,9 +296,7 @@ def main(args):
         print ""
     
     if (print_all or args['--task']):
-        print_task_stats_header(bench_stats["server-1"])
-        for server_name in server_names: 
-            print_task_stats(server_name, bench_stats[server_name])
+        print_task_stats(server_names, bench_stats)
         print ""
 
 if __name__ == '__main__':
