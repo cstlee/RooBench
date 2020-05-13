@@ -222,7 +222,7 @@ def print_task_stats(server_names, bench_stats):
         stats_line += " %7d" % stat 
     print stats_line
 
-def print_packet_stats_header():
+def print_packet_stats(server_names, transport_stats):
     print "Packet statistics:"
     print "------------------"
     print "                " + \
@@ -234,28 +234,43 @@ def print_packet_stats_header():
           "    PING" + \
           " UNKNOWN" + \
           "   ERROR"
-          
-def print_packet_stats(server_name, transport_stats):
-    print server_name.rjust(10, ' ') + \
-          " (TX) " + \
-          "%8d" % transport_stats["tx_data_pkts"] + \
-          "%8d" % transport_stats["tx_grant_pkts"] + \
-          "%8d" % transport_stats["tx_done_pkts"] + \
-          "%8d" % transport_stats["tx_resend_pkts"] + \
-          "%8d" % transport_stats["tx_busy_pkts"] + \
-          "%8d" % transport_stats["tx_ping_pkts"] + \
-          "%8d" % transport_stats["tx_unknown_pkts"] + \
-          "%8d" % transport_stats["tx_error_pkts"]
+    hline = "                " + \
+            " -------" + \
+            " -------" + \
+            " -------" + \
+            " -------" + \
+            " -------" + \
+            " -------" + \
+            " -------" + \
+            " -------"
+    print hline
+    pkt_types = ("data",
+                 "grant",
+                 "done",
+                 "resend",
+                 "busy",
+                 "ping",
+                 "unknown",
+                 "error")
+    totals = np.zeros(2 * len(pkt_types))
+    for server_name in server_names:
+        stats = transport_stats[server_name]
+        data = []
+        for direction in ("tx", "rx"):
+            for pkt_type in pkt_types:
+                key = direction + '_' + pkt_type + '_pkts'
+                data.append(stats[key])
+        data = np.array(data)
+        totals += data
+        print server_name.rjust(10, ' ') + \
+            " (TX)  %7d %7d %7d %7d %7d %7d %7d %7d" % tuple(data[0:len(pkt_types)]) 
+        print "          " + \
+            " (RX)  %7d %7d %7d %7d %7d %7d %7d %7d" % tuple(data[len(pkt_types):]) 
+    print hline
+    print 'Totals'.rjust(10, ' ') + \
+        " (TX)  %7d %7d %7d %7d %7d %7d %7d %7d" % tuple(totals[0:len(pkt_types)]) 
     print "          " + \
-          " (RX) " + \
-          "%8d" % transport_stats["rx_data_pkts"] + \
-          "%8d" % transport_stats["rx_grant_pkts"] + \
-          "%8d" % transport_stats["rx_done_pkts"] + \
-          "%8d" % transport_stats["rx_resend_pkts"] + \
-          "%8d" % transport_stats["rx_busy_pkts"] + \
-          "%8d" % transport_stats["rx_ping_pkts"] + \
-          "%8d" % transport_stats["rx_unknown_pkts"] + \
-          "%8d" % transport_stats["rx_error_pkts"]
+        " (RX)  %7d %7d %7d %7d %7d %7d %7d %7d" % tuple(totals[len(pkt_types):]) 
 
 def server_id_from_name(server_name):
     return int(server_name[7:])
@@ -292,9 +307,7 @@ def main(args):
         print_net_usage(server_names, bench_stats, transport_stats)
         print ""
     if (print_all or args['--packet']):
-        print_packet_stats_header()
-        for server_name in server_names: 
-            print_packet_stats(server_name, transport_stats[server_name])
+        print_packet_stats(server_names, transport_stats)
         print ""
     
     if (print_all or args['--task']):
