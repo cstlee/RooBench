@@ -168,6 +168,7 @@ RpcBenchmark::dump_stats()
         // Client stats
         nlohmann::json client_stats_json;
         client_stats_json["count"] = client_stats.count.load();
+        client_stats_json["failures"] = client_stats.failures.load();
         uint64_t max_sample_index =
             client_stats.sample_count.load() & SAMPLE_INDEX_MASK;
         std::vector<uint> latencies;
@@ -258,6 +259,8 @@ RpcBenchmark::client_poll()
 
     char buf[1000000];
 
+    bool rpc_failed = false;
+
     uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
     for (const BenchConfig::Client::Phase& phase : config.client.phases) {
         std::vector<SimpleRpc::unique_ptr<SimpleRpc::Rpc>> rpcs;
@@ -289,19 +292,28 @@ RpcBenchmark::client_poll()
                 }
             }
             rpc->wait();
+            if (rpc->checkStatus() == SimpleRpc::Rpc::Status::FAILED) {
+                rpc_failed = true;
+                break;
+            }
+        }
+        if (rpc_failed) {
+            break;
         }
     }
     uint64_t stop_cycles = PerfUtils::Cycles::rdtsc();
 
     client_running.clear();
 
-    // Update stats
-    {
+    if (!rpc_failed) {
+        // Update stats
         std::lock_guard<std::mutex> lock(stats_mutex);
         client_stats.samples.at(client_stats.sample_count & SAMPLE_INDEX_MASK) =
             stop_cycles - start_cycles;
         client_stats.sample_count++;
         client_stats.count++;
+    } else {
+        client_stats.failures++;
     }
 }
 

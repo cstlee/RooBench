@@ -167,6 +167,7 @@ DpcBenchmark::dump_stats()
         // Client stats
         nlohmann::json client_stats_json;
         client_stats_json["count"] = client_stats.count.load();
+        client_stats_json["failures"] = client_stats.failures.load();
         uint64_t max_sample_index =
             client_stats.sample_count.load() & SAMPLE_INDEX_MASK;
         std::vector<uint> latencies;
@@ -289,13 +290,15 @@ DpcBenchmark::client_poll()
 
     client_running.clear();
 
-    // Update stats
-    {
+    if (rpc->checkStatus() == Roo::RooPC::Status::COMPLETED) {
+        // Update stats
         std::lock_guard<std::mutex> lock(stats_mutex);
         client_stats.samples.at(client_stats.sample_count & SAMPLE_INDEX_MASK) =
             stop_cycles - start_cycles;
         client_stats.sample_count++;
         client_stats.count++;
+    } else {
+        client_stats.failures++;
     }
 }
 

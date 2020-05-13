@@ -79,6 +79,7 @@ class RpcBenchmark : public Benchmark {
 
     struct ClientStats {
         std::atomic<int> count;
+        std::atomic<int> failures;
         std::atomic<uint64_t> sample_count;
         std::array<std::atomic<uint64_t>, MAX_SAMPLES> samples;
     };
