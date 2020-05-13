@@ -32,6 +32,8 @@ import os
 import json
 import numpy as np
 
+np.seterr(divide = 'ignore') 
+
 def stat_diff(stat_name, start_data, end_data):
     return end_data[stat_name] - start_data[stat_name];
 
@@ -145,8 +147,8 @@ def print_net_usage(server_names, bench_stats, transport_stats):
         rx_msg = transport_stats[server_name]['rx_message_bytes']
         tx_tran = transport_stats[server_name]['transport_tx_bytes']
         rx_tran = transport_stats[server_name]['transport_rx_bytes']
-        app_iter = " %6d %6d" % (tx_msg / count, rx_msg / count)
-        tran_iter = " %6d %6d" % (tx_tran / count, rx_tran / count)
+        app_iter = " %6d %6d" % (np.divide(tx_msg, count), np.divide(rx_msg, count))
+        tran_iter = " %6d %6d" % (np.divide(tx_tran, count), np.divide(rx_tran, count))
         app_Tput = " %6.1f %6.1f" % (8 * tx_msg / (1000000.0 * duration), 8 * rx_msg / (1000000.0 * duration))
         tran_Tput = " %6.1f %6.1f" % (8 * tx_tran / (1000000.0 * duration), 8 * rx_tran / (1000000.0 * duration))
         app_Tot = " %6.1f %6.1f" % (tx_msg / (1000000.0), rx_msg / (1000000.0))
@@ -179,8 +181,8 @@ def print_cpu_usage_stats(server_names, bench_stats, transport_stats):
         cps = transport_stats[server_name]['cycles_per_second']
         duration = transport_stats[server_name]['elapsed_time']
         print server_name.rjust(10, ' ') + \
-            " %12d " % (cycles / count) + \
-            " %12.3f " % ((cycles / cps) / duration) + \
+            " %12d " % np.divide(cycles, count) + \
+            " %12.3f " % np.divide(cycles, cps * duration) + \
             " %12d " % (cycles)
 
 def print_task_stats(server_names, bench_stats):
@@ -210,14 +212,14 @@ def print_task_stats(server_names, bench_stats):
         total += np.array(server_stat)
         print stats_line
     print header_
-    norm = total / float(total[0])
+    norm = np.divide(total, total[0])
     stats_line = "    Total"
     for stat in total:
         stats_line += " %7d" % stat 
     print stats_line
     stats_line = "Normalize"
     for stat in norm:
-        stats_line += " %7d" % round(stat) 
+        stats_line += " %7d" % stat 
     print stats_line
 
 def print_packet_stats_header():
