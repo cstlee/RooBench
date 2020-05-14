@@ -137,6 +137,7 @@ RpcImpl::handleResponse(Proto::ResponseHeader* header,
     if (!responseArrived) {
         responseArrived = true;
         response = std::move(message);
+        request->cancel();
     } else {
         // Response already received
         NOTICE("Duplicate response received for Rpc (%lu, %lu)", rpcId.socketId,
