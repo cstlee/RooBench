@@ -233,7 +233,9 @@ def print_packet_stats(server_names, transport_stats):
           "    BUSY" + \
           "    PING" + \
           " UNKNOWN" + \
-          "   ERROR"
+          "   ERROR" + \
+          " |" + \
+          "   TOTAL"
     hline = "                " + \
             " -------" + \
             " -------" + \
@@ -242,6 +244,8 @@ def print_packet_stats(server_names, transport_stats):
             " -------" + \
             " -------" + \
             " -------" + \
+            " -------" + \
+            "  " + \
             " -------"
     print hline
     pkt_types = ("data",
@@ -252,25 +256,28 @@ def print_packet_stats(server_names, transport_stats):
                  "ping",
                  "unknown",
                  "error")
-    totals = np.zeros(2 * len(pkt_types))
+    tx_totals = np.zeros(len(pkt_types))
+    rx_totals = np.zeros(len(pkt_types))
     for server_name in server_names:
         stats = transport_stats[server_name]
-        data = []
-        for direction in ("tx", "rx"):
-            for pkt_type in pkt_types:
-                key = direction + '_' + pkt_type + '_pkts'
-                data.append(stats[key])
-        data = np.array(data)
-        totals += data
+        tx_data = []
+        rx_data = []
+        for pkt_type in pkt_types:
+            tx_data.append(stats['tx_' + pkt_type + '_pkts'])
+            rx_data.append(stats['rx_' + pkt_type + '_pkts'])
+        tx_data = np.array(tx_data)
+        rx_data = np.array(rx_data)
+        tx_totals += tx_data
+        rx_totals += rx_data
         print server_name.rjust(10, ' ') + \
-            " (TX)  %7d %7d %7d %7d %7d %7d %7d %7d" % tuple(data[0:len(pkt_types)]) 
+            " (TX)  %7d %7d %7d %7d %7d %7d %7d %7d | %7d" % tuple(np.append(tx_data, np.sum(tx_data))) 
         print "          " + \
-            " (RX)  %7d %7d %7d %7d %7d %7d %7d %7d" % tuple(data[len(pkt_types):]) 
+            " (RX)  %7d %7d %7d %7d %7d %7d %7d %7d | %7d" % tuple(np.append(rx_data, np.sum(rx_data))) 
     print hline
     print 'Totals'.rjust(10, ' ') + \
-        " (TX)  %7d %7d %7d %7d %7d %7d %7d %7d" % tuple(totals[0:len(pkt_types)]) 
+        " (TX)  %7d %7d %7d %7d %7d %7d %7d %7d | %7d" % tuple(np.append(tx_totals, np.sum(tx_totals))) 
     print "          " + \
-        " (RX)  %7d %7d %7d %7d %7d %7d %7d %7d" % tuple(totals[len(pkt_types):]) 
+        " (RX)  %7d %7d %7d %7d %7d %7d %7d %7d | %7d" % tuple(np.append(rx_totals, np.sum(rx_totals))) 
 
 def server_id_from_name(server_name):
     return int(server_name[7:])
