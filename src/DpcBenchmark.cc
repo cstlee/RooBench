@@ -42,6 +42,20 @@ create_address_book(const BenchConfig::ServerList& server_list,
     return address_book;
 }
 
+int
+get_server_id(
+    const std::unordered_map<int, Homa::Driver::Address>& address_book,
+    Homa::Driver* driver)
+{
+    Homa::Driver::Address localAddress = driver->getLocalAddress();
+    for (auto& elem : address_book) {
+        if (elem.second == localAddress) {
+            return elem.first;
+        }
+    }
+    throw;
+}
+
 Homa::Driver*
 startDriver()
 {
@@ -74,6 +88,7 @@ DpcBenchmark::DpcBenchmark(nlohmann::json bench_config, std::string server_name,
                             driver->getLocalAddress()))))
     , socket(Roo::Socket::create(transport.get()))
     , server_address_book(create_address_book(config.serverList, driver.get()))
+    , server_id(get_server_id(server_address_book, driver.get()))
     , run(true)
     , run_client(false)
     , client_running()
@@ -312,7 +327,7 @@ DpcBenchmark::client_poll()
 Homa::Driver::Address
 DpcBenchmark::selectServer(int taskType, int index)
 {
-    index = index % config.tasks.at(taskType).servers.size();
+    index = (index + server_id) % config.tasks.at(taskType).servers.size();
     int server_id = config.tasks.at(taskType).servers.at(index);
     return server_address_book.at(server_id);
 }

@@ -100,6 +100,7 @@ class DpcBenchmark : public Benchmark {
     const std::unique_ptr<Homa::Transport> transport;
     const std::unique_ptr<Roo::Socket> socket;
     const std::unordered_map<int, Homa::Driver::Address> server_address_book;
+    const int server_id;
     std::atomic<bool> run;
     std::atomic<bool> run_client;
     std::atomic_flag client_running;
