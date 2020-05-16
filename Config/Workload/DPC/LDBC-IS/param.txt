@@ -1,0 +1,8 @@
+unicode_char = 2 bytes
+id = 8 bytes (16B including some table id or label)
+string = 20 unicode_char (40B)
+long_string = 128 unicode_char (256B)
+text = 1000 unicode_char (2000B)
+date = 10 unicode_char (20B)
+date_time = 28 unicode_char (56B)
+boolean = 1 byte

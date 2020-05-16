@@ -1,0 +1,60 @@
+{
+    "bench_type": "RPC",
+    "description": "LDBC IS 5 - Creator of a message",
+    "param": "IS 5",
+    "client": {
+        "phases": [
+            {
+                "requests": [
+                    {
+                        "task_id": 1,
+                        "size": 16,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 2,
+                        "size": 16,
+                        "count": 1
+                    }
+                ]
+            }
+        ],
+        "servers": [
+            1
+        ]
+    },
+    "tasks": [
+        {
+            "id": 1,
+            "description": "Message-hasCreator -> Person.id",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 8,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                2
+            ]
+        },
+        {
+            "id": 2,
+            "description": "Person",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 80,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                3
+            ]
+        }
+    ]
+}

@@ -1,0 +1,37 @@
+{
+    "bench_type": "DPC",
+    "description": "LDBC IS 4 - Content of a message",
+    "param": "IS 4",
+    "client": {
+        "phases": [
+            {
+                "requests": [
+                    {
+                        "task_id": 1,
+                        "size": 16,
+                        "count": 1
+                    }
+                ]
+            }
+        ],
+        "servers": [
+            1
+        ]
+    },
+    "tasks": [
+        {
+            "id": 1,
+            "description": "Message",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 2056,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                2
+            ]
+        }
+    ]
+}

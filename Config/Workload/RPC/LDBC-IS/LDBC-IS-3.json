@@ -1,0 +1,69 @@
+{
+    "bench_type": "RPC",
+    "description": "LDBC IS 3 - Friends of a person (100 Friends, 10 servers)",
+    "param": "IS 3",
+    "client": {
+        "phases": [
+            {
+                "requests": [
+                    {
+                        "task_id": 1,
+                        "size": 16,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 2,
+                        "size": 160,
+                        "count": 10
+                    }
+                ]
+            }
+        ],
+        "servers": [
+            1
+        ]
+    },
+    "tasks": [
+        {
+            "id": 1,
+            "description": "Person-knows -> [(Knows.creationData, Person.id)...]",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 6400,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                2
+            ]
+        },
+        {
+            "id": 2,
+            "description": "Person x 10",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 800,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12
+            ]
+        }
+    ]
+}

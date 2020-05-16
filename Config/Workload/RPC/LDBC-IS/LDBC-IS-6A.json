@@ -1,0 +1,102 @@
+{
+    "bench_type": "RPC",
+    "description": "LDBC IS 6A - Forum of a message (Post)",
+    "param": "IS 6A",
+    "client": {
+        "phases": [
+            {
+                "requests": [
+                    {
+                        "task_id": 1,
+                        "size": 16,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 2,
+                        "size": 16,
+                        "count": 1
+                    },
+                    {
+                        "task_id": 3,
+                        "size": 16,
+                        "count": 1
+                    }
+                ]
+            },
+            {
+                "requests": [
+                    {
+                        "task_id": 4,
+                        "size": 16,
+                        "count": 1
+                    }
+                ]
+            }
+        ],
+        "servers": [
+            1
+        ]
+    },
+    "tasks": [
+        {
+            "id": 1,
+            "description": "Message-containerOf -> Forum.id",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 8,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                2
+            ]
+        },
+        {
+            "id": 2,
+            "description": "Forum",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 256,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                3
+            ]
+        },
+        {
+            "id": 3,
+            "description": "Forum-hasModerator -> Person.id",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 8,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                4
+            ]
+        },
+        {
+            "id": 4,
+            "description": "Person",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 80,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                5
+            ]
+        }
+    ]
+}

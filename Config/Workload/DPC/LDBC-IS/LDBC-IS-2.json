@@ -1,0 +1,137 @@
+{
+    "bench_type": "DPC",
+    "description": "LDBC IS 2 - Recent messages of a person",
+    "param": "IS 2",
+    "client": {
+        "phases": [
+            {
+                "requests": [
+                    {
+                        "task_id": 1,
+                        "size": 16,
+                        "count": 1
+                    }
+                ]
+            }
+        ],
+        "servers": [
+            1
+        ]
+    },
+    "tasks": [
+        {
+            "id": 1,
+            "description": "_hasCreator -> [Message.id ...]",
+            "requests": [
+                {
+                    "task_id": 2,
+                    "size": 16,
+                    "count": 10
+                },
+                {
+                    "task_id": 3,
+                    "size": 16,
+                    "count": 10
+                }
+            ],
+            "responses": [],
+            "servers": [
+                2
+            ]
+        },
+        {
+            "id": 2,
+            "description": "Message",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 2064,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12
+            ]
+        },
+        {
+            "id": 3,
+            "description": "Message-replyOf -> Post.id",
+            "requests": [
+                {
+                    "task_id": 4,
+                    "size": 16,
+                    "count": 1
+                }
+            ],
+            "responses": [],
+            "servers": [
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12
+            ]
+        },
+        {
+            "id": 4,
+            "description": "Post-hasCreator -> Person.id",
+            "requests": [
+                {
+                    "task_id": 5,
+                    "size": 16,
+                    "count": 1
+                }
+            ],
+            "responses": [],
+            "servers": [
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12
+            ]
+        },
+        {
+            "id": 5,
+            "description": "Person",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 88,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12
+            ]
+        }
+    ]
+}

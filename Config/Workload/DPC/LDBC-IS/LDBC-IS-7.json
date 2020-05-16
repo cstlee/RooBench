@@ -1,0 +1,147 @@
+{
+    "bench_type": "DPC",
+    "description": "LDBC IS 7 - Replies of a message (10 replies, 100 friends)",
+    "param": "IS 7",
+    "client": {
+        "phases": [
+            {
+                "requests": [
+                    {
+                        "task_id": 1,
+                        "size": 16,
+                        "count": 1
+                    },
+                    {
+                        "task_id": 2,
+                        "size": 16,
+                        "count": 1
+                    }
+                ]
+            }
+        ],
+        "servers": [
+            1
+        ]
+    },
+    "tasks": [
+        {
+            "id": 1,
+            "description": "Message-replyOf -> [Comment.id ...]",
+            "requests": [
+                {
+                    "task_id": 4,
+                    "size": 16,
+                    "count": 10
+                },
+                {
+                    "task_id": 5,
+                    "size": 16,
+                    "count": 10
+                }
+            ],
+            "responses": [],
+            "servers": [
+                2
+            ]
+        },
+        {
+            "id": 2,
+            "description": "Message-hasCreator -> Person.id",
+            "requests": [
+                {
+                    "task_id": 3,
+                    "size": 16,
+                    "count": 1
+                }
+            ],
+            "responses": [],
+            "servers": [
+                3
+            ]
+        },
+        {
+            "id": 3,
+            "description": "Person->knows -> [Person.id ...]",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 808,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                2
+            ]
+        },
+        {
+            "id": 4,
+            "description": "Comment",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 2064,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12
+            ]
+        },
+        {
+            "id": 5,
+            "description": "Comment-hasCreator -> Person.id",
+            "requests": [
+                {
+                    "task_id": 6,
+                    "size": 16,
+                    "count": 1
+                }
+            ],
+            "responses": [],
+            "servers": [
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12
+            ]
+        },
+        {
+            "id": 6,
+            "description": "Person",
+            "requests": [],
+            "responses": [
+                {
+                    "size": 88,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12
+            ]
+        }
+    ]
+}
