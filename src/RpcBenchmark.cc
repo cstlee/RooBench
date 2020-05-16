@@ -257,7 +257,8 @@ RpcBenchmark::client_poll()
         return;
     }
 
-    char buf[1000000];
+    const int buf_size = 1000000;
+    char buf[buf_size];
 
     bool rpc_failed = false;
 
@@ -278,9 +279,15 @@ RpcBenchmark::client_poll()
                 assert(request_config.size <= sizeof(buf));
                 Homa::unique_ptr<Homa::OutMessage> message =
                     rpc->allocRequest();
-                message->append(buf, request_config.size);
+                int bytesRemaining = request_config.size;
+                while (bytesRemaining > 0) {
+                    int bytesToCopy = std::min(bytesRemaining, buf_size);
+                    message->append(buf, bytesToCopy);
+                    bytesRemaining -= bytesToCopy;
+                }
                 rpc->send(dest, std::move(message));
                 rpcs.push_back(std::move(rpc));
+                socket->poll();
             }
         }
         for (auto it = rpcs.begin(); it != rpcs.end(); ++it) {
@@ -348,7 +355,8 @@ RpcBenchmark::handleBenchmarkTask(
     task->getRequest()->get(0, &request, sizeof(request));
     const BenchConfig::Task& task_config = config.tasks.at(request.taskType);
 
-    char buf[1000000];
+    const int buf_size = 1000000;
+    char buf[buf_size];
 
     // Only one response is supported.  Take the first one if multiple are
     // configured.
@@ -356,7 +364,12 @@ RpcBenchmark::handleBenchmarkTask(
         task_config.responses.front();
     assert(response_config.size <= sizeof(buf));
     Homa::unique_ptr<Homa::OutMessage> message = task->allocOutMessage();
-    message->append(buf, response_config.size);
+    int bytesRemaining = response_config.size;
+    while (bytesRemaining > 0) {
+        int bytesToCopy = std::min(bytesRemaining, buf_size);
+        message->append(buf, bytesToCopy);
+        bytesRemaining -= bytesToCopy;
+    }
     task->reply(std::move(message));
 
     // Update stats

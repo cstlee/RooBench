@@ -256,7 +256,8 @@ DpcBenchmark::client_poll()
         return;
     }
 
-    char buf[1000000];
+    const int buf_size = 1000000;
+    char buf[buf_size];
 
     uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
     Roo::unique_ptr<Roo::RooPC> rpc = socket->allocRooPC();
@@ -274,8 +275,14 @@ DpcBenchmark::client_poll()
                 assert(request_config.size <= sizeof(buf));
                 Homa::unique_ptr<Homa::OutMessage> message =
                     rpc->allocRequest();
-                message->append(buf, request_config.size);
+                int bytesRemaining = request_config.size;
+                while (bytesRemaining > 0) {
+                    int bytesToCopy = std::min(bytesRemaining, buf_size);
+                    message->append(buf, bytesToCopy);
+                    bytesRemaining -= bytesToCopy;
+                }
                 rpc->send(dest, std::move(message));
+                socket->poll();
             }
         }
         while (rpc->checkStatus() == Roo::RooPC::Status::IN_PROGRESS) {
@@ -333,7 +340,8 @@ DpcBenchmark::handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task)
     const int taskId = request.taskType;
     const BenchConfig::Task& task_config = config.tasks.at(taskId);
 
-    char buf[1000000];
+    const int buf_size = 1000000;
+    char buf[buf_size];
 
     for (const BenchConfig::Request& request_config : task_config.requests) {
         for (int i = 0; i < request_config.count; ++i) {
@@ -347,7 +355,12 @@ DpcBenchmark::handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task)
             assert(request_config.size <= sizeof(buf));
             Homa::unique_ptr<Homa::OutMessage> message =
                 task->allocOutMessage();
-            message->append(buf, request_config.size);
+            int bytesRemaining = request_config.size;
+            while (bytesRemaining > 0) {
+                int bytesToCopy = std::min(bytesRemaining, buf_size);
+                message->append(buf, bytesToCopy);
+                bytesRemaining -= bytesToCopy;
+            }
             task->delegate(dest, std::move(message));
         }
     }
@@ -357,7 +370,12 @@ DpcBenchmark::handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task)
             assert(response_config.size <= sizeof(buf));
             Homa::unique_ptr<Homa::OutMessage> message =
                 task->allocOutMessage();
-            message->append(buf, response_config.size);
+            int bytesRemaining = response_config.size;
+            while (bytesRemaining > 0) {
+                int bytesToCopy = std::min(bytesRemaining, buf_size);
+                message->append(buf, bytesToCopy);
+                bytesRemaining -= bytesToCopy;
+            }
             task->reply(std::move(message));
         }
     }
