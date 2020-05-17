@@ -57,14 +57,13 @@ RpcImpl::send(Homa::Driver::Address destination,
 {
     SpinLock::Lock lock(mutex);
     request = std::move(message);
+    Perf::counters.tx_message_bytes.add(request->length());
     Homa::Driver::Address replyAddress =
         socket->transport->getDriver()->getLocalAddress();
     Proto::RequestHeader outboundHeader(rpcId);
     socket->transport->getDriver()->addressToWireFormat(
         replyAddress, &outboundHeader.replyAddress);
     request->prepend(&outboundHeader, sizeof(outboundHeader));
-
-    Perf::counters.tx_message_bytes.add(request->length());
     request->send(destination);
 }
 
