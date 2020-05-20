@@ -95,6 +95,7 @@ DpcBenchmark::DpcBenchmark(nlohmann::json bench_config, std::string server_name,
     , stats_mutex()
     , client_stats()
     , task_stats(create_task_stats_map(config.tasks))
+    , active_cycles(0)
 {
     Homa::Debug::setLogPolicy(Homa::Debug::logPolicyFromString("ERROR"));
     Roo::Debug::setLogPolicy(Roo::Debug::logPolicyFromString("ERROR"));
@@ -135,6 +136,7 @@ DpcBenchmark::dump_stats()
         roo_stats["timestamp"] = stats.timestamp;
         roo_stats["cycles_per_second"] = stats.cycles_per_second;
         roo_stats["active_cycles"] = stats.active_cycles;
+        roo_stats["idle_cycles"] = stats.idle_cycles;
         roo_stats["tx_message_bytes"] = stats.tx_message_bytes;
         roo_stats["rx_message_bytes"] = stats.rx_message_bytes;
         roo_stats["transport_tx_bytes"] = stats.transport_tx_bytes;
@@ -169,6 +171,7 @@ DpcBenchmark::dump_stats()
         nlohmann::json bench_stats_json;
         bench_stats_json["timestamp"] = timestamp;
         bench_stats_json["cycles_per_second"] = PerfUtils::Cycles::perSecond();
+        bench_stats_json["active_cycles"] = active_cycles.load();
 
         // Task stats
         std::vector<nlohmann::json> task_stats_json_list;
@@ -319,6 +322,7 @@ DpcBenchmark::client_poll()
             stop_cycles - start_cycles;
         client_stats.sample_count++;
         client_stats.count++;
+        active_cycles += stop_cycles - start_cycles;
     } else {
         client_stats.failures++;
     }
@@ -350,6 +354,7 @@ DpcBenchmark::dispatch(Roo::unique_ptr<Roo::ServerTask> task)
 void
 DpcBenchmark::handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task)
 {
+    uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
     WireFormat::Benchmark::Request request;
     task->getRequest()->get(0, &request, sizeof(request));
     const int taskId = request.taskType;
@@ -394,12 +399,14 @@ DpcBenchmark::handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task)
             task->reply(std::move(message));
         }
     }
+    uint64_t stop_cycles = PerfUtils::Cycles::rdtsc();
 
     // Done with the task;
     task.reset();
 
     // Update stats
     task_stats.at(taskId)->count.fetch_add(1, std::memory_order_relaxed);
+    active_cycles += stop_cycles - start_cycles;
 }
 
 }  // namespace RooBench
