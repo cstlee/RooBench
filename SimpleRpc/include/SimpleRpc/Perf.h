@@ -32,9 +32,11 @@ struct Stats {
     /// Conversion factor from cycles to seconds.
     double cycles_per_second;
 
-    /// CPU time actively processing Rpc and ServerTask messages in
-    /// cycles.
+    /// CPU time actively processing Rpc and ServerTask messages in cycles.
     uint64_t active_cycles;
+
+    /// CPU time spent running with nothing to do in cycles.
+    uint64_t idle_cycles;
 
     /// Number of application message bytes sent.
     uint64_t tx_message_bytes;
