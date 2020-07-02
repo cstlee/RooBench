@@ -115,9 +115,12 @@ void
 RpcBenchmark::run_benchmark()
 {
     while (run) {
+        uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
         socket->poll();
         server_poll();
         client_poll();
+        uint64_t stop_cycles = PerfUtils::Cycles::rdtsc();
+        active_cycles += stop_cycles - start_cycles;
     }
 }
 
@@ -337,7 +340,6 @@ RpcBenchmark::client_poll()
             stop_cycles - start_cycles;
         client_stats.sample_count++;
         client_stats.count++;
-        active_cycles += stop_cycles - start_cycles;
     } else {
         client_stats.failures++;
     }
@@ -370,7 +372,6 @@ void
 RpcBenchmark::handleBenchmarkTask(
     SimpleRpc::unique_ptr<SimpleRpc::ServerTask> task)
 {
-    uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
     WireFormat::Benchmark::Request request;
     task->getRequest()->get(0, &request, sizeof(request));
     const BenchConfig::Task& task_config = config.tasks.at(request.taskType);
@@ -391,12 +392,10 @@ RpcBenchmark::handleBenchmarkTask(
         bytesRemaining -= bytesToCopy;
     }
     task->reply(std::move(message));
-    uint64_t stop_cycles = PerfUtils::Cycles::rdtsc();
 
     // Update stats
     task_stats.at(request.taskType)
         ->count.fetch_add(1, std::memory_order_relaxed);
-    active_cycles += stop_cycles - start_cycles;
 }
 
 }  // namespace RooBench

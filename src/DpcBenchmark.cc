@@ -114,9 +114,12 @@ void
 DpcBenchmark::run_benchmark()
 {
     while (run) {
+        uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
         socket->poll();
         server_poll();
         client_poll();
+        uint64_t stop_cycles = PerfUtils::Cycles::rdtsc();
+        active_cycles += stop_cycles - start_cycles;
     }
 }
 
@@ -322,7 +325,6 @@ DpcBenchmark::client_poll()
             stop_cycles - start_cycles;
         client_stats.sample_count++;
         client_stats.count++;
-        active_cycles += stop_cycles - start_cycles;
     } else {
         client_stats.failures++;
     }
@@ -354,7 +356,6 @@ DpcBenchmark::dispatch(Roo::unique_ptr<Roo::ServerTask> task)
 void
 DpcBenchmark::handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task)
 {
-    uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
     WireFormat::Benchmark::Request request;
     task->getRequest()->get(0, &request, sizeof(request));
     const int taskId = request.taskType;
@@ -399,14 +400,12 @@ DpcBenchmark::handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task)
             task->reply(std::move(message));
         }
     }
-    uint64_t stop_cycles = PerfUtils::Cycles::rdtsc();
 
     // Done with the task;
     task.reset();
 
     // Update stats
     task_stats.at(taskId)->count.fetch_add(1, std::memory_order_relaxed);
-    active_cycles += stop_cycles - start_cycles;
 }
 
 }  // namespace RooBench
