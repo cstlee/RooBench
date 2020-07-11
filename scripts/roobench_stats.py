@@ -51,6 +51,7 @@ def get_transport_stats(data_dir, server_name):
     data["elapsed_time"] = stat_diff("timestamp", start_data, end_data) / cps
     data["cycles_per_second"] = cps
     data["active_cycles"] = stat_diff("active_cycles", start_data, end_data)
+    data["idle_cycles"] = stat_diff("idle_cycles", start_data, end_data)
     data["tx_message_bytes"] = stat_diff("tx_message_bytes", start_data, end_data)
     data["rx_message_bytes"] = stat_diff("rx_message_bytes", start_data, end_data)
     data["transport_tx_bytes"] = stat_diff("transport_tx_bytes", start_data, end_data)
@@ -100,6 +101,7 @@ def get_bench_stats(data_dir, server_name):
 
     data["elapsed_time"] = stat_diff("timestamp", start_data, end_data) / cps
     data["cycles_per_second"] = cps
+    data["active_cycles"] = stat_diff("active_cycles", start_data, end_data)
     data["client_latency"] = latency_stats
     data["client_count"] = end_data["client_stats"]["count"] - start_data["client_stats"]["count"]
     data["task_stats"] = task_stats
@@ -159,15 +161,18 @@ def print_cpu_usage_stats(server_names, bench_stats, transport_stats):
     count = bench_stats['server-1']['client_count']
     print "CPU Usage Statistics:"
     print "---------------------"
-    h1 = "              Active Cycles               "
-    h1_ = " -----------------------------------------"
+    h1 = "                     Active Cycles                      "
+    h1_ = " -------------------------------------------------------"
     h2 = "   per iter   " + \
+         "   per iter   " + \
          "   CPU Load   " + \
          "     Total    "
     h2_2 = "   (cycles)   " + \
+          "     (us)     " + \
           "   (1 core)   " + \
           "   (cycles)   "
     h2_ = " -------------" + \
+          " -------------" + \
           " -------------" + \
           " -------------"
     s = '          '
@@ -176,14 +181,54 @@ def print_cpu_usage_stats(server_names, bench_stats, transport_stats):
     print s + h2
     print s + h2_2
     print s + h2_
+    cycles_total = 0
+    cycles_total_fg = 0
+    cycles_total_bg = 0
     for server_name in server_names:
-        cycles = transport_stats[server_name]['active_cycles']
-        cps = transport_stats[server_name]['cycles_per_second']
+        cps_t = transport_stats[server_name]['cycles_per_second']
+        cps_b = bench_stats[server_name]['cycles_per_second']
+        cps = cps_t
         duration = transport_stats[server_name]['elapsed_time']
+        cycles = bench_stats[server_name]['active_cycles'] + transport_stats[server_name]['active_cycles']
+        cycles_total += cycles
         print server_name.rjust(10, ' ') + \
             " %12d " % np.divide(cycles, count) + \
+            " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
             " %12.3f " % np.divide(cycles, cps * duration) + \
             " %12d " % (cycles)
+        cycles = bench_stats[server_name]['active_cycles']
+        cycles_total_fg += cycles
+        print "(fg)".rjust(10, ' ') + \
+            " %12d " % np.divide(cycles, count) + \
+            " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
+            " %12.3f " % np.divide(cycles, cps * duration) + \
+            " %12d " % (cycles)
+        cycles = transport_stats[server_name]['active_cycles']
+        cycles_total_bg += cycles
+        print "(bg)".rjust(10, ' ') + \
+            " %12d " % np.divide(cycles, count) + \
+            " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
+            " %12.3f " % np.divide(cycles, cps * duration) + \
+            " %12d " % (cycles)
+    print s + h2_
+    cycles = cycles_total
+    print "Total".rjust(10, ' ') + \
+        " %12d " % np.divide(cycles, count) + \
+        " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
+        " %12.3f " % np.divide(cycles, cps * duration) + \
+        " %12d " % (cycles)
+    cycles = cycles_total_fg
+    print "(fg)".rjust(10, ' ') + \
+        " %12d " % np.divide(cycles, count) + \
+        " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
+        " %12.3f " % np.divide(cycles, cps * duration) + \
+        " %12d " % (cycles)
+    cycles = cycles_total_bg
+    print "(bg)".rjust(10, ' ') + \
+        " %12d " % np.divide(cycles, count) + \
+        " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
+        " %12.3f " % np.divide(cycles, cps * duration) + \
+        " %12d " % (cycles)
 
 def print_task_stats(server_names, bench_stats):
     print "Task statistics:"
