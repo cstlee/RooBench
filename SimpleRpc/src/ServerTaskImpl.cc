@@ -94,17 +94,23 @@ ServerTaskImpl::reply(Homa::unique_ptr<Homa::OutMessage> message)
 bool
 ServerTaskImpl::poll()
 {
+    Perf::Timer timer;
+    timer.split();
     if (request->dropped()) {
         // Nothing left to do
+        Perf::counters.active_cycles.add(timer.split());
         return false;
     } else if (!response) {
         // No response sent.
+        Perf::counters.active_cycles.add(timer.split());
         return false;
     } else if (response->getStatus() != Homa::OutMessage::Status::IN_PROGRESS) {
         // Response completed or failed
+        Perf::counters.active_cycles.add(timer.split());
         return false;
     } else {
         // Response in progress
+        Perf::counters.idle_cycles.add(timer.split());
         return true;
     }
 }

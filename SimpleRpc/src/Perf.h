@@ -16,6 +16,7 @@
 #ifndef SIMPLERPC_PERF_H
 #define SIMPLERPC_PERF_H
 
+#include <PerfUtils/Cycles.h>
 #include <SimpleRpc/Perf.h>
 
 #include <atomic>
@@ -128,6 +129,34 @@ struct ThreadCounters : public Counters {
  * Per thread counters.
  */
 extern thread_local ThreadCounters counters;
+
+/**
+ * Provides a convenient way to measure multiple consecutive cycle time
+ * intervals.
+ */
+class Timer {
+  public:
+    /**
+     * Construct a new uninitialized Timer.
+     */
+    Timer()
+        : split_tsc(0)
+    {}
+
+    /**
+     * Return the number of cycles since the last time split was called.
+     */
+    inline uint64_t split()
+    {
+        uint64_t prev_tsc = split_tsc;
+        split_tsc = PerfUtils::Cycles::rdtsc();
+        return split_tsc - prev_tsc;
+    }
+
+  private:
+    /// Cycle time that split was last called.
+    uint64_t split_tsc;
+};
 
 }  // namespace Perf
 }  // namespace SimpleRpc
