@@ -114,12 +114,8 @@ void
 DpcBenchmark::run_benchmark()
 {
     while (run) {
-        uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
-        socket->poll();
         server_poll();
         client_poll();
-        uint64_t stop_cycles = PerfUtils::Cycles::rdtsc();
-        active_cycles += stop_cycles - start_cycles;
     }
 }
 
@@ -257,10 +253,16 @@ DpcBenchmark::create_task_stats_map(const BenchConfig::TaskMap& task_map)
 void
 DpcBenchmark::server_poll()
 {
+    socket->poll();
+    uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
+    uint64_t stop_cycles = start_cycles;
     for (Roo::unique_ptr<Roo::ServerTask> task = socket->receive(); task;
          task = socket->receive()) {
         dispatch(std::move(task));
+        stop_cycles = PerfUtils::Cycles::rdtsc();
     }
+    active_cycles.fetch_add(stop_cycles - start_cycles,
+                            std::memory_order_relaxed);
 }
 
 /**
@@ -279,6 +281,9 @@ DpcBenchmark::client_poll()
 
     const int buf_size = 1000000;
     char buf[buf_size];
+
+    uint64_t poll_start_cycles = 0;
+    uint64_t poll_cycles = 0;
 
     uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
     Roo::unique_ptr<Roo::RooPC> rpc = socket->allocRooPC();
@@ -303,9 +308,12 @@ DpcBenchmark::client_poll()
                     bytesRemaining -= bytesToCopy;
                 }
                 rpc->send(dest, std::move(message));
+                poll_start_cycles = PerfUtils::Cycles::rdtsc();
                 socket->poll();
+                poll_cycles += (PerfUtils::Cycles::rdtsc() - poll_start_cycles);
             }
         }
+        poll_start_cycles = PerfUtils::Cycles::rdtsc();
         while (rpc->checkStatus() == Roo::RooPC::Status::IN_PROGRESS) {
             socket->poll();
             if (!run_client) {
@@ -313,12 +321,17 @@ DpcBenchmark::client_poll()
             }
         }
         rpc->wait();
+        poll_cycles += (PerfUtils::Cycles::rdtsc() - poll_start_cycles);
     }
     uint64_t stop_cycles = PerfUtils::Cycles::rdtsc();
-
+    Roo::RooPC::Status status = rpc->checkStatus();
+    rpc.reset();
+    active_cycles.fetch_add(
+        PerfUtils::Cycles::rdtsc() - start_cycles - poll_cycles,
+        std::memory_order_relaxed);
     client_running.clear();
 
-    if (rpc->checkStatus() == Roo::RooPC::Status::COMPLETED) {
+    if (status == Roo::RooPC::Status::COMPLETED) {
         // Update stats
         std::lock_guard<std::mutex> lock(stats_mutex);
         client_stats.samples.at(client_stats.sample_count & SAMPLE_INDEX_MASK) =
