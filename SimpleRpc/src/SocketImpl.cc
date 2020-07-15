@@ -101,6 +101,7 @@ SocketImpl::poll()
                                                 sizeof(header));
             ServerTaskImpl* task =
                 new ServerTaskImpl(this, &header, std::move(message));
+            SpinLock::Lock lock_socket(mutex);
             pendingTasks.push_back(task);
         } else if (common.opcode == Proto::Opcode::Response) {
             // Incoming message is a response
