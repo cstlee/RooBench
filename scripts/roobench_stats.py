@@ -267,31 +267,32 @@ def print_task_stats(server_names, bench_stats):
         stats_line += " %7d" % stat 
     print stats_line
 
-def print_packet_stats(server_names, transport_stats):
+def print_packet_stats(server_names, bench_stats, transport_stats):
+    count = bench_stats['server-1']['client_count']
     print "Packet statistics:"
     print "------------------"
     print "                " + \
-          "    DATA" + \
-          "   GRANT" + \
-          "    DONE" + \
-          "  RESEND" + \
-          "    BUSY" + \
-          "    PING" + \
-          " UNKNOWN" + \
-          "   ERROR" + \
+          "     DATA" + \
+          "    GRANT" + \
+          "     DONE" + \
+          "   RESEND" + \
+          "     BUSY" + \
+          "     PING" + \
+          "  UNKNOWN" + \
+          "    ERROR" + \
           " |" + \
-          "   TOTAL"
+          "    TOTAL"
     hline = "                " + \
-            " -------" + \
-            " -------" + \
-            " -------" + \
-            " -------" + \
-            " -------" + \
-            " -------" + \
-            " -------" + \
-            " -------" + \
+            " --------" + \
+            " --------" + \
+            " --------" + \
+            " --------" + \
+            " --------" + \
+            " --------" + \
+            " --------" + \
+            " --------" + \
             "  " + \
-            " -------"
+            " --------"
     print hline
     pkt_types = ("data",
                  "grant",
@@ -315,14 +316,18 @@ def print_packet_stats(server_names, transport_stats):
         tx_totals += tx_data
         rx_totals += rx_data
         print server_name.rjust(10, ' ') + \
-            " (TX)  %7d %7d %7d %7d %7d %7d %7d %7d | %7d" % tuple(np.append(tx_data, np.sum(tx_data))) 
+            " (TX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.append(tx_data, np.sum(tx_data))) 
         print "          " + \
-            " (RX)  %7d %7d %7d %7d %7d %7d %7d %7d | %7d" % tuple(np.append(rx_data, np.sum(rx_data))) 
+            " (RX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.append(rx_data, np.sum(rx_data))) 
     print hline
     print 'Totals'.rjust(10, ' ') + \
-        " (TX)  %7d %7d %7d %7d %7d %7d %7d %7d | %7d" % tuple(np.append(tx_totals, np.sum(tx_totals))) 
+        " (TX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.append(tx_totals, np.sum(tx_totals))) 
     print "          " + \
-        " (RX)  %7d %7d %7d %7d %7d %7d %7d %7d | %7d" % tuple(np.append(rx_totals, np.sum(rx_totals))) 
+        " (RX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.append(rx_totals, np.sum(rx_totals))) 
+    print 'Normalize'.rjust(10, ' ') + \
+        " (TX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.append(tx_totals / count, np.sum(tx_totals) / count)) 
+    print "          " + \
+        " (RX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.append(rx_totals / count, np.sum(rx_totals)/ count)) 
 
 def server_id_from_name(server_name):
     return int(server_name[7:])
@@ -359,7 +364,7 @@ def main(args):
         print_net_usage(server_names, bench_stats, transport_stats)
         print ""
     if (print_all or args['--packet']):
-        print_packet_stats(server_names, transport_stats)
+        print_packet_stats(server_names, bench_stats, transport_stats)
         print ""
     
     if (print_all or args['--task']):
