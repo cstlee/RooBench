@@ -289,15 +289,7 @@ DpcBenchmark::client_poll()
                 assert(request_config.size >=
                        sizeof(WireFormat::Benchmark::Request));
                 assert(request_config.size <= sizeof(buf));
-                Homa::unique_ptr<Homa::OutMessage> message =
-                    rpc->allocRequest();
-                int bytesRemaining = request_config.size;
-                while (bytesRemaining > 0) {
-                    int bytesToCopy = std::min(bytesRemaining, buf_size);
-                    message->append(buf, bytesToCopy);
-                    bytesRemaining -= bytesToCopy;
-                }
-                rpc->send(dest, std::move(message));
+                rpc->send(dest, buf, request_config.size);
                 poll_start_cycles = PerfUtils::Cycles::rdtsc();
                 socket->poll();
                 poll_cycles += (PerfUtils::Cycles::rdtsc() - poll_start_cycles);
@@ -381,30 +373,14 @@ DpcBenchmark::handleBenchmarkTask(Roo::unique_ptr<Roo::ServerTask> task)
             assert(request_config.size >=
                    sizeof(WireFormat::Benchmark::Request));
             assert(request_config.size <= sizeof(buf));
-            Homa::unique_ptr<Homa::OutMessage> message =
-                task->allocOutMessage();
-            int bytesRemaining = request_config.size;
-            while (bytesRemaining > 0) {
-                int bytesToCopy = std::min(bytesRemaining, buf_size);
-                message->append(buf, bytesToCopy);
-                bytesRemaining -= bytesToCopy;
-            }
-            task->delegate(dest, std::move(message));
+            task->delegate(dest, buf, request_config.size);
         }
     }
 
     for (const BenchConfig::Response& response_config : task_config.responses) {
         for (int i = 0; i < response_config.count; ++i) {
             assert(response_config.size <= sizeof(buf));
-            Homa::unique_ptr<Homa::OutMessage> message =
-                task->allocOutMessage();
-            int bytesRemaining = response_config.size;
-            while (bytesRemaining > 0) {
-                int bytesToCopy = std::min(bytesRemaining, buf_size);
-                message->append(buf, bytesToCopy);
-                bytesRemaining -= bytesToCopy;
-            }
-            task->reply(std::move(message));
+            task->reply(buf, response_config.size);
         }
     }
 

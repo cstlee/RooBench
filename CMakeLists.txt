@@ -20,7 +20,7 @@ project(RooBench VERSION 0.0.1 LANGUAGES CXX)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 
 find_package(Homa COMPONENTS DpdkDriver)
-find_package(Roo)
+find_package(Roo 0.2.0.0)
 find_package(PerfUtils)
 find_package(Threads)
 
