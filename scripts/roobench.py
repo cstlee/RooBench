@@ -35,6 +35,9 @@ if __name__ == '__main__':
     elif args['<command>'] == 'plot':
         import roobench_plot
         roobench_plot.main(docopt(roobench_plot.__doc__, argv=argv))
+    elif args['<command>'] == 'run':
+        import roobench_run
+        roobench_run.main(docopt(roobench_run.__doc__, argv=argv))
     elif args['<command>'] == 'server':
         import roobench_server
         roobench_server.main(docopt(roobench_server.__doc__, argv=argv))
