@@ -119,8 +119,7 @@ def print_latency(bench_stats):
     print " Med (us)  Min (us)  90% (us)  99% (us) "
     print "%8.3f  %8.3f  %8.3f  %8.3f" % (latency_med, latency_min, latency_90, latency_99)
 
-def print_net_usage(server_names, bench_stats, transport_stats):
-    count = bench_stats['server-1']['client_count']
+def print_net_usage(client_names, server_names, bench_stats, transport_stats):
     print "Network Usage Statistics:"
     print "-------------------------"
     h1 = "               Application                " + \
@@ -143,22 +142,32 @@ def print_net_usage(server_names, bench_stats, transport_stats):
     print s + h2_2 + h2_2
     print s + h2_ + h2_
     print s + h3 + h3 + h3 + h3 + h3 + h3
-    for server_name in server_names:
-        duration = transport_stats[server_name]['elapsed_time']
-        tx_msg = transport_stats[server_name]['tx_message_bytes']
-        rx_msg = transport_stats[server_name]['rx_message_bytes']
-        tx_tran = transport_stats[server_name]['transport_tx_bytes']
-        rx_tran = transport_stats[server_name]['transport_rx_bytes']
+
+    def print_net_entry(host_name, count):
+        duration = transport_stats[host_name]['elapsed_time']
+        tx_msg = transport_stats[host_name]['tx_message_bytes']
+        rx_msg = transport_stats[host_name]['rx_message_bytes']
+        tx_tran = transport_stats[host_name]['transport_tx_bytes']
+        rx_tran = transport_stats[host_name]['transport_rx_bytes']
         app_iter = " %6d %6d" % (np.divide(tx_msg, count), np.divide(rx_msg, count))
         tran_iter = " %6d %6d" % (np.divide(tx_tran, count), np.divide(rx_tran, count))
         app_Tput = " %6.1f %6.1f" % (8 * tx_msg / (1000000.0 * duration), 8 * rx_msg / (1000000.0 * duration))
         tran_Tput = " %6.1f %6.1f" % (8 * tx_tran / (1000000.0 * duration), 8 * rx_tran / (1000000.0 * duration))
         app_Tot = " %6.1f %6.1f" % (tx_msg / (1000000.0), rx_msg / (1000000.0))
         tran_Tot = " %6.1f %6.1f" % (tx_tran / (1000000.0), rx_tran / (1000000.0))
-        print server_name.rjust(10, ' ') + app_iter + app_Tput + app_Tot + tran_iter + tran_Tput + tran_Tot
+        print host_name.rjust(10, ' ') + app_iter + app_Tput + app_Tot + tran_iter + tran_Tput + tran_Tot
 
-def print_cpu_usage_stats(server_names, bench_stats, transport_stats):
-    count = bench_stats['server-1']['client_count']
+    total_count = 0
+
+    for client_name in client_names:
+        count = bench_stats[client_name]['client_count']
+        print_net_entry(client_name, count)
+        total_count += count
+    for server_name in server_names:
+        print_net_entry(server_name, total_count)
+
+
+def print_cpu_usage_stats(client_names, server_names, bench_stats, transport_stats):
     print "CPU Usage Statistics:"
     print "---------------------"
     h1 = "                     Active Cycles                      "
@@ -181,83 +190,97 @@ def print_cpu_usage_stats(server_names, bench_stats, transport_stats):
     print s + h2
     print s + h2_2
     print s + h2_
-    cycles_total = 0
-    cycles_total_fg = 0
-    cycles_total_bg = 0
-    for server_name in server_names:
-        cps_t = transport_stats[server_name]['cycles_per_second']
-        cps_b = bench_stats[server_name]['cycles_per_second']
+    total_fg_time = 0.0
+    total_bg_time = 0.0
+    total_count = 0
+
+    def print_cpu_entry(host_name, count):
+        cps_t = transport_stats[host_name]['cycles_per_second']
+        cps_b = bench_stats[host_name]['cycles_per_second']
         cps = cps_t
-        duration = transport_stats[server_name]['elapsed_time']
-        cycles = bench_stats[server_name]['active_cycles'] + transport_stats[server_name]['active_cycles']
-        cycles_total += cycles
-        print server_name.rjust(10, ' ') + \
+        duration = transport_stats[host_name]['elapsed_time']
+        cycles = bench_stats[host_name]['active_cycles'] + transport_stats[host_name]['active_cycles']
+        print host_name.rjust(10, ' ') + \
             " %12d " % np.divide(cycles, count) + \
             " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
             " %12.3f " % np.divide(cycles, cps * duration) + \
             " %12d " % (cycles)
-        cycles = bench_stats[server_name]['active_cycles']
-        cycles_total_fg += cycles
+        cycles = bench_stats[host_name]['active_cycles']
         print "(fg)".rjust(10, ' ') + \
             " %12d " % np.divide(cycles, count) + \
             " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
             " %12.3f " % np.divide(cycles, cps * duration) + \
             " %12d " % (cycles)
-        cycles = transport_stats[server_name]['active_cycles']
-        cycles_total_bg += cycles
+        cycles = transport_stats[host_name]['active_cycles']
         print "(bg)".rjust(10, ' ') + \
             " %12d " % np.divide(cycles, count) + \
             " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
             " %12.3f " % np.divide(cycles, cps * duration) + \
             " %12d " % (cycles)
-    print s + h2_
-    cycles = cycles_total
-    print "Total".rjust(10, ' ') + \
-        " %12d " % np.divide(cycles, count) + \
-        " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
-        " %12.3f " % np.divide(cycles, cps * duration) + \
-        " %12d " % (cycles)
-    cycles = cycles_total_fg
-    print "(fg)".rjust(10, ' ') + \
-        " %12d " % np.divide(cycles, count) + \
-        " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
-        " %12.3f " % np.divide(cycles, cps * duration) + \
-        " %12d " % (cycles)
-    cycles = cycles_total_bg
-    print "(bg)".rjust(10, ' ') + \
-        " %12d " % np.divide(cycles, count) + \
-        " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
-        " %12.3f " % np.divide(cycles, cps * duration) + \
-        " %12d " % (cycles)
+        fg_time = bench_stats[host_name]['active_cycles'] / cps
+        bg_time = transport_stats[host_name]['active_cycles'] /cps
+        return (fg_time, bg_time)
 
-def print_task_stats(server_names, bench_stats):
+    for client_name in client_names:
+        count = bench_stats[client_name]['client_count']
+        total_count += count
+        fg_time, bg_time = print_cpu_entry(client_name, count)
+        total_fg_time += fg_time
+        total_bg_time += bg_time
+    for server_name in server_names:
+        fg_time, bg_time = print_cpu_entry(server_name, total_count)
+        total_fg_time += fg_time
+        total_bg_time += bg_time
+
+    print s + h2_
+    duration = transport_stats[client_names[0]]['elapsed_time']
+    cpu_time = total_fg_time + total_bg_time
+    print "Total".rjust(10, ' ') + \
+        "      --      " + \
+        " %12.3f " % np.divide(1000000 * cpu_time, total_count) + \
+        " %12.3f " % np.divide(cpu_time, duration) + \
+        "      --      "
+    cpu_time = total_fg_time
+    print "(fg)".rjust(10, ' ') + \
+        "      --      " + \
+        " %12.3f " % np.divide(1000000 * cpu_time, total_count) + \
+        " %12.3f " % np.divide(cpu_time, duration) + \
+        "      --      "
+    cpu_time = total_bg_time
+    print "(bg)".rjust(10, ' ') + \
+        "      --      " + \
+        " %12.3f " % np.divide(1000000 * cpu_time, total_count) + \
+        " %12.3f " % np.divide(cpu_time, duration) + \
+        "      --      "
+
+def print_task_stats(host_names, bench_stats):
     print "Task statistics:"
     print "----------------"
     header = "         "
     header_ = header
     header += "       C"
     header_ += " -------"
-    total = [0,]
-    for task_id in bench_stats['server-1']["task_stats"]:
+    total = [0.0,]
+    for task_id in bench_stats[host_names[0]]["task_stats"]:
         header += ("T(%d)" % task_id).rjust(8, ' ')
         header_ += " -------"
-        total.append(0)
+        total.append(0.0)
     total = np.array(total) 
     print header
     print header_
-    for server_name in server_names: 
-        stats_line = server_name.rjust(9, ' ')
-        client_count = bench_stats[server_name]['client_count']
+    for host_name in host_names: 
+        stats_line = host_name.rjust(9, ' ')
+        client_count = bench_stats[host_name]['client_count']
         stats_line += " %7d" % client_count
         server_stat = [client_count, ] 
-        for task_id in bench_stats[server_name]["task_stats"]:
-            task_count = bench_stats[server_name]['task_stats'][task_id]
+        for task_id in bench_stats[host_name]["task_stats"]:
+            task_count = bench_stats[host_name]['task_stats'][task_id]
             stats_line += " %7d" % task_count 
             server_stat.append(task_count)
         total += np.array(server_stat)
         print stats_line
     print header_
-    norm = np.divide(total, total[0])
+    norm = np.rint(np.divide(total, total[0]))
     stats_line = "    Total"
     for stat in total:
         stats_line += " %7d" % stat 
@@ -267,8 +290,10 @@ def print_task_stats(server_names, bench_stats):
         stats_line += " %7d" % stat 
     print stats_line
 
-def print_packet_stats(server_names, bench_stats, transport_stats):
-    count = bench_stats['server-1']['client_count']
+def print_packet_stats(client_names, server_names, bench_stats, transport_stats):
+    count = 0
+    for client_name in client_names:
+        count += bench_stats[client_name]['client_count']
     print "Packet statistics:"
     print "------------------"
     print "                " + \
@@ -304,8 +329,8 @@ def print_packet_stats(server_names, bench_stats, transport_stats):
                  "error")
     tx_totals = np.zeros(len(pkt_types))
     rx_totals = np.zeros(len(pkt_types))
-    for server_name in server_names:
-        stats = transport_stats[server_name]
+    for host_name in client_names + server_names:
+        stats = transport_stats[host_name]
         tx_data = []
         rx_data = []
         for pkt_type in pkt_types:
@@ -315,7 +340,7 @@ def print_packet_stats(server_names, bench_stats, transport_stats):
         rx_data = np.array(rx_data)
         tx_totals += tx_data
         rx_totals += rx_data
-        print server_name.rjust(10, ' ') + \
+        print host_name.rjust(10, ' ') + \
             " (TX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.append(tx_data, np.sum(tx_data))) 
         print "          " + \
             " (RX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.append(rx_data, np.sum(rx_data))) 
@@ -325,23 +350,26 @@ def print_packet_stats(server_names, bench_stats, transport_stats):
     print "          " + \
         " (RX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.append(rx_totals, np.sum(rx_totals))) 
     print 'Normalize'.rjust(10, ' ') + \
-        " (TX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.append(tx_totals / count, np.sum(tx_totals) / count)) 
+        " (TX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.rint(np.append(tx_totals / count, np.sum(tx_totals) / count))) 
     print "          " + \
-        " (RX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.append(rx_totals / count, np.sum(rx_totals)/ count)) 
+        " (RX)  %8d %8d %8d %8d %8d %8d %8d %8d | %8d" % tuple(np.rint(np.append(rx_totals / count, np.sum(rx_totals)/ count))) 
 
-def server_id_from_name(server_name):
-    return int(server_name[7:])
+def id_from_name(host_name):
+    return int(host_name[7:])
 
 def main(args):
-    server_names =[os.path.basename(file)[:-19] for file in glob.glob(args['<data_dir>'] + '/*_bench_stats_1.json')]
-    server_names.sort(key=server_id_from_name)
+    client_names =[os.path.basename(file)[:-19] for file in glob.glob(args['<data_dir>'] + '/client*_bench_stats_1.json')]
+    client_names.sort(key=id_from_name)
+    server_names =[os.path.basename(file)[:-19] for file in glob.glob(args['<data_dir>'] + '/server*_bench_stats_1.json')]
+    server_names.sort(key=id_from_name)
+    host_names = client_names + server_names
 
     transport_stats = {}
     bench_stats = {}
 
-    for server_name in server_names: 
-        transport_stats[server_name] = get_transport_stats(args['<data_dir>'], server_name)
-        bench_stats[server_name] = get_bench_stats(args['<data_dir>'], server_name)
+    for host_name in host_names: 
+        transport_stats[host_name] = get_transport_stats(args['<data_dir>'], host_name)
+        bench_stats[host_name] = get_bench_stats(args['<data_dir>'], host_name)
 
     flags_set = 0
     for flag in ('--cpu', '--latency', '--network', '--packet', '--task'):
@@ -353,22 +381,22 @@ def main(args):
         print_all = True
 
     if (print_all or args['--latency']):
-        print_latency(bench_stats["server-1"])
+        print_latency(bench_stats[client_names[0]])
         print ""
     
     if (print_all or args['--cpu']):
-        print_cpu_usage_stats(server_names, bench_stats, transport_stats)
+        print_cpu_usage_stats(client_names, server_names, bench_stats, transport_stats)
         print ""
     
     if (print_all or args['--network']):
-        print_net_usage(server_names, bench_stats, transport_stats)
+        print_net_usage(client_names, server_names, bench_stats, transport_stats)
         print ""
     if (print_all or args['--packet']):
-        print_packet_stats(server_names, bench_stats, transport_stats)
+        print_packet_stats(client_names, server_names, bench_stats, transport_stats)
         print ""
     
     if (print_all or args['--task']):
-        print_task_stats(server_names, bench_stats)
+        print_task_stats(host_names, bench_stats)
         print ""
 
 if __name__ == '__main__':

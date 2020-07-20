@@ -22,6 +22,7 @@ Options:
     -h, --help          Show this screen.
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -54,6 +55,9 @@ def main(args):
     hosts, bin_dir, src_dir = read_config(args['<config>'])
     remote_config_dir = '/shome/RooConfig'
     date_time = datetime.now().strftime('%F-%H-%M-%S')
+    with open(os.path.expanduser(args["<bench_config>"])) as f:
+        bench_config = json.load(f)
+    client_count = bench_config['client_count'] 
     coordinator_setup(args['<log_dir>'],
                       date_time,
                       args['<server_config>'],
@@ -62,7 +66,7 @@ def main(args):
     ##### Setup hosts
     SERVER_ID=1
     for host in hosts:
-        print "Setup Server %d on %s" %(SERVER_ID, host)
+        print "Setup Host %d on %s" %(SERVER_ID, host)
         setup_host(host, date_time)
         SERVER_ID += 1
 
@@ -70,7 +74,10 @@ def main(args):
     SERVER_ID=1
     for host in hosts:
         print "Start Server %d on %s" %(SERVER_ID, host)
-        server_name = "server-{}".format(SERVER_ID)
+        if SERVER_ID <= client_count:
+            server_name = "client-{}".format(SERVER_ID)
+        else:
+            server_name = "server-{}".format(SERVER_ID - client_count)
         cmd = 'sudo nohup {src_dir}/scripts/roobench.py server launch {server_name} {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, server_name=server_name, remote_config_dir=remote_config_dir)
         remote_call(host, cmd)
         SERVER_ID += 1
@@ -79,8 +86,8 @@ def main(args):
 
     ##### Run Client
     
-    for host in hosts[:1]:
-        print "Start Client on {}".format(host)
+    for host in hosts[:client_count]:
+        print "Start Client Workload on {}".format(host)
         cmd = 'sudo nohup {src_dir}/scripts/roobench.py server start {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, remote_config_dir=remote_config_dir)
         remote_call(host, cmd)
     
@@ -90,7 +97,6 @@ def main(args):
     SERVER_ID=1
     for host in hosts:
         print "Dump Server %d stats on %s" %(SERVER_ID, host)
-        server_name = "server-{}".format(SERVER_ID)
         cmd = 'sudo nohup {src_dir}/scripts/roobench.py server stats {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, remote_config_dir=remote_config_dir)
         remote_call(host, cmd)
         SERVER_ID += 1
@@ -101,7 +107,6 @@ def main(args):
     SERVER_ID=1
     for host in hosts:
         print "Dump Server %d stats on %s" %(SERVER_ID, host)
-        server_name = "server-{}".format(SERVER_ID)
         cmd = 'sudo nohup {src_dir}/scripts/roobench.py server stats {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, remote_config_dir=remote_config_dir)
         remote_call(host, cmd)
         SERVER_ID += 1
@@ -126,8 +131,9 @@ def main(args):
     ##### Collect Logs
     SERVER_ID=1
     for host in hosts:
-        print "Copying Server %d logs from %s" %(SERVER_ID, host)
+        print "Copying Host %d logs from %s" %(SERVER_ID, host)
         os.system('scp "{host}:~/logs/{date_time}/*" "{log_dir}/{date_time}"'.format(host=host, date_time=date_time, log_dir=args['<log_dir>']))
+        SERVER_ID=1
 
 
 if __name__ == '__main__':

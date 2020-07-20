@@ -16,7 +16,7 @@
 
 """
 Usage:
-    roobench.py config bench <server_list> <workload> [--out=<name>]
+    roobench.py config bench <server_list> <workload> [<client_count>] [--out=<name>]
     roobench.py config server-list <server_config> <hostname>... [--out=<name>]
 
 Options:
@@ -34,8 +34,12 @@ def main(args):
             server_list = json.load(f)
         with open(args["<workload>"]) as f:
             workload = json.load(f)
+        client_count = 1
+        if args['<client_count>'] is not None:
+            client_count = int(args['<client_count>'])
         config = {}
-        config["server_list"] = server_list
+        config["client_count"] = client_count
+        config["server_list"] = {u'servers': server_list['servers'][client_count:]}
         config["workload"] = workload
         if args["--out"]:
             with open(args["--out"], 'w') as f:

@@ -24,36 +24,27 @@
 #include <fstream>
 #include <functional>
 #include <nlohmann/json.hpp>
+#include <random>
 
 #include "WireFormat.h"
 
 namespace RooBench {
 
 namespace {
-std::unordered_map<int, Homa::Driver::Address>
-create_address_book(const BenchConfig::ServerList& server_list,
-                    Homa::Driver* driver)
-{
-    std::unordered_map<int, Homa::Driver::Address> address_book;
-    for (auto& elem : server_list) {
-        address_book.insert(
-            {elem.first, driver->getAddress(&elem.second.address)});
-    }
-    return address_book;
-}
-
-int
-get_server_id(
-    const std::unordered_map<int, Homa::Driver::Address>& address_book,
-    Homa::Driver* driver)
+std::vector<Homa::Driver::Address>
+create_peer_list(const BenchConfig::ServerList& server_list,
+                 Homa::Driver* driver)
 {
     Homa::Driver::Address localAddress = driver->getLocalAddress();
-    for (auto& elem : address_book) {
-        if (elem.second == localAddress) {
-            return elem.first;
+    std::vector<Homa::Driver::Address> peer_list;
+    for (auto& elem : server_list) {
+        Homa::Driver::Address serverAddress =
+            driver->getAddress(&elem.second.address);
+        if (serverAddress != localAddress) {
+            peer_list.push_back(serverAddress);
         }
     }
-    throw;
+    return peer_list;
 }
 
 Homa::Driver*
@@ -87,8 +78,7 @@ RpcBenchmark::RpcBenchmark(nlohmann::json bench_config, std::string server_name,
           driver.get(), std::hash<std::string>{}(driver->addressToString(
                             driver->getLocalAddress()))))
     , socket(SimpleRpc::Socket::create(transport.get()))
-    , server_address_book(create_address_book(config.serverList, driver.get()))
-    , server_id(get_server_id(server_address_book, driver.get()))
+    , peer_list(create_peer_list(config.serverList, driver.get()))
     , run(true)
     , run_client(false)
     , client_running()
@@ -298,8 +288,7 @@ RpcBenchmark::client_poll()
                     reinterpret_cast<WireFormat::Benchmark::Request*>(buf);
                 request->common.opcode = WireFormat::Benchmark::opcode;
                 request->taskType = request_config.taskId;
-                Homa::Driver::Address dest =
-                    selectServer(request_config.taskId, i);
+                Homa::Driver::Address dest = selectServer();
                 assert(request_config.size >=
                        sizeof(WireFormat::Benchmark::Request));
                 assert(request_config.size <= sizeof(buf));
@@ -358,11 +347,15 @@ RpcBenchmark::client_poll()
 }
 
 Homa::Driver::Address
-RpcBenchmark::selectServer(int taskType, int index)
+RpcBenchmark::selectServer()
 {
-    index = (index + server_id) % config.tasks.at(taskType).servers.size();
-    int server_id = config.tasks.at(taskType).servers.at(index);
-    return server_address_book.at(server_id);
+    static thread_local std::random_device rd;
+    static thread_local std::mt19937 gen(rd());
+    auto start = peer_list.begin();
+    auto end = peer_list.end();
+    std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
+    std::advance(start, dis(gen));
+    return *start;
 }
 
 void

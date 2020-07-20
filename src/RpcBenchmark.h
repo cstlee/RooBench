@@ -92,15 +92,14 @@ class RpcBenchmark : public Benchmark {
 
     void server_poll();
     void client_poll();
-    Homa::Driver::Address selectServer(int taskType, int index);
+    Homa::Driver::Address selectServer();
     void dispatch(SimpleRpc::unique_ptr<SimpleRpc::ServerTask> task);
     void handleBenchmarkTask(SimpleRpc::unique_ptr<SimpleRpc::ServerTask> task);
 
     const std::unique_ptr<Homa::Driver> driver;
     const std::unique_ptr<Homa::Transport> transport;
     const std::unique_ptr<SimpleRpc::Socket> socket;
-    const std::unordered_map<int, Homa::Driver::Address> server_address_book;
-    const int server_id;
+    const std::vector<Homa::Driver::Address> peer_list;
     std::atomic<bool> run;
     std::atomic<bool> run_client;
     std::atomic_flag client_running;
