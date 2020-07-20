@@ -75,10 +75,10 @@ Rpc::Status
 RpcImpl::checkStatus()
 {
     SpinLock::Lock lock(mutex);
-    if (!request) {
-        return Status::NOT_STARTED;
-    } else if (responseArrived) {
+    if (responseArrived) {
         return Status::COMPLETED;
+    } else if (!request) {
+        return Status::NOT_STARTED;
     } else if (request->getStatus() == Homa::OutMessage::Status::FAILED) {
         return Status::FAILED;
     } else {
@@ -127,7 +127,7 @@ RpcImpl::handleResponse(Proto::ResponseHeader* header,
     if (!responseArrived) {
         responseArrived = true;
         response = std::move(message);
-        request->cancel();
+        request.reset();
     } else {
         // Response already received
         NOTICE("Duplicate response received for Rpc (%lu, %lu)", rpcId.socketId,

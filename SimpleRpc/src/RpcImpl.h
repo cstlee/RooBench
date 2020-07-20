@@ -69,7 +69,7 @@ class RpcImpl : public Rpc {
     /// True when the response has been received.
     bool responseArrived;
 
-    /// Request that has been sent for this Rpc.
+    /// Request being sent for this Rpc.
     Homa::unique_ptr<Homa::OutMessage> request;
 
     /// Response for this Rpc that have not yet been delievered.
