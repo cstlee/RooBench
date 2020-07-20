@@ -94,19 +94,15 @@ serverMain(Node* server, std::vector<std::string> addresses)
             MessageHeader header;
             task->getRequest()->get(0, &header, sizeof(MessageHeader));
 
-            char buf[header.length];
-            task->getRequest()->get(sizeof(MessageHeader), &buf, header.length);
+            char response[sizeof(MessageHeader) + header.length];
+            task->getRequest()->get(0, &response, sizeof(response));
 
             if (_PRINT_SERVER_) {
                 std::cout << "  -> Server " << server->id
                           << " (rpcId: " << header.id << ")" << std::endl;
             }
 
-            Homa::unique_ptr<Homa::OutMessage> response =
-                task->allocOutMessage();
-            response->append(&header, sizeof(MessageHeader));
-            response->append(buf, header.length);
-            task->reply(std::move(response));
+            task->reply(response, sizeof(response));
             if (_PRINT_SERVER_) {
                 std::cout << "  <- Server " << server->id
                           << " (rpcId: " << header.id << ")" << std::endl;
@@ -134,24 +130,23 @@ clientMain(int count, int size, std::vector<std::string> addresses)
     Node client(1);
     for (int i = 0; i < count; ++i) {
         uint64_t id = nextId++;
-        char payload[size];
+        char request[sizeof(MessageHeader) + size];
+        MessageHeader* header = reinterpret_cast<MessageHeader*>(request);
+        char* payload = &(request[sizeof(MessageHeader)]);
         for (int i = 0; i < size; ++i) {
             payload[i] = randData(gen);
         }
 
         SimpleRpc::unique_ptr<SimpleRpc::Rpc> rpc(client.socket->allocRpc());
-        MessageHeader header;
-        header.id = id;
-        header.length = size;
+        header->id = id;
+        header->length = size;
 
         std::string destAddress = addresses[randAddr(gen)];
-        Homa::unique_ptr<Homa::OutMessage> request = rpc->allocRequest();
-        request->append(&header, sizeof(MessageHeader));
-        request->append(payload, size);
         if (_PRINT_CLIENT_) {
-            std::cout << "Client -> (rpcId: " << header.id << ")" << std::endl;
+            std::cout << "Client -> (rpcId: " << header->id << ")" << std::endl;
         }
-        rpc->send(client.driver.getAddress(&destAddress), std::move(request));
+        rpc->send(client.driver.getAddress(&destAddress), request,
+                  sizeof(request));
 
         rpc->wait();
 
@@ -161,8 +156,8 @@ clientMain(int count, int size, std::vector<std::string> addresses)
             continue;
         }
 
-        Homa::unique_ptr<Homa::InMessage> response = rpc->receive();
-        if (response) {
+        Homa::InMessage* response = rpc->receive();
+        if (response != nullptr) {
             MessageHeader header;
             char buf[size];
             response->get(0, &header, sizeof(MessageHeader));

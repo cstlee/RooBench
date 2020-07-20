@@ -61,27 +61,18 @@ ServerTaskImpl::getRequest()
 }
 
 /**
- * @copydoc ServerTask::allocOutMessage()
- */
-Homa::unique_ptr<Homa::OutMessage>
-ServerTaskImpl::allocOutMessage()
-{
-    Homa::unique_ptr<Homa::OutMessage> message = socket->transport->alloc();
-    message->reserve(sizeof(Proto::ResponseHeader));
-    return message;
-}
-
-/**
  * @copydoc ServerTask::reply()
  */
 void
-ServerTaskImpl::reply(Homa::unique_ptr<Homa::OutMessage> message)
+ServerTaskImpl::reply(const void* response, size_t length)
 {
-    Perf::counters.tx_message_bytes.add(message->length());
+    Homa::unique_ptr<Homa::OutMessage> message = socket->transport->alloc();
     Proto::ResponseHeader header(rpcId);
-    message->prepend(&header, sizeof(header));
+    message->append(&header, sizeof(header));
+    message->append(response, length);
+    Perf::counters.tx_message_bytes.add(sizeof(Proto::ResponseHeader) + length);
     message->send(replyAddress);
-    response = std::move(message);
+    this->response = std::move(message);
 }
 
 /**

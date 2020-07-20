@@ -107,34 +107,23 @@ TEST_F(ServerTaskImplTest, getRequest)
     EXPECT_EQ(&inMessage, task->getRequest());
 }
 
-TEST_F(ServerTaskImplTest, allocOutMessage)
-{
-    initDefaultTask();
-
-    EXPECT_CALL(transport, alloc())
-        .WillOnce(
-            Return(ByMove(Homa::unique_ptr<Homa::OutMessage>(&outMessage))));
-    EXPECT_CALL(outMessage, reserve(Eq(sizeof(Proto::ResponseHeader))));
-
-    Homa::unique_ptr<Homa::OutMessage> message = task->allocOutMessage();
-
-    EXPECT_EQ(&outMessage, message.get());
-    EXPECT_CALL(outMessage, release());
-}
-
 TEST_F(ServerTaskImplTest, reply)
 {
     initDefaultTask();
 
-    Homa::unique_ptr<Homa::OutMessage> message(&outMessage);
+    char buffer[1024];
 
     EXPECT_FALSE(task->response);
 
+    EXPECT_CALL(transport, alloc())
+        .WillOnce(
+            Return(ByMove(Homa::unique_ptr<Homa::OutMessage>(&outMessage))));
     EXPECT_CALL(outMessage,
-                prepend(An<const void*>(), Eq(sizeof(Proto::ResponseHeader))));
+                append(An<const void*>(), Eq(sizeof(Proto::RequestHeader))));
+    EXPECT_CALL(outMessage, append(Eq(buffer), Eq(sizeof(buffer))));
     EXPECT_CALL(outMessage, send(Eq(replyAddress)));
 
-    task->reply(std::move(message));
+    task->reply(buffer, sizeof(buffer));
 
     ASSERT_TRUE(task->response);
     EXPECT_EQ(&outMessage, task->response.get());

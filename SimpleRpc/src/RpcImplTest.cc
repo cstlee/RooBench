@@ -85,35 +85,26 @@ TEST_F(RpcImplTest, constructor)
     EXPECT_EQ(rpcId, rpc.rpcId);
 }
 
-TEST_F(RpcImplTest, allocRequest)
-{
-    EXPECT_CALL(transport, alloc())
-        .WillOnce(
-            Return(ByMove(Homa::unique_ptr<Homa::OutMessage>(&outMessage))));
-    EXPECT_CALL(outMessage, reserve(Eq(sizeof(Proto::RequestHeader))));
-
-    Homa::unique_ptr<Homa::OutMessage> message = rpc->allocRequest();
-
-    EXPECT_EQ(&outMessage, message.get());
-    EXPECT_CALL(outMessage, release());
-}
-
 TEST_F(RpcImplTest, send)
 {
-    Homa::unique_ptr<Homa::OutMessage> message(&outMessage);
+    char buffer[1024];
 
     EXPECT_FALSE(rpc->request);
 
+    EXPECT_CALL(transport, alloc())
+        .WillOnce(
+            Return(ByMove(Homa::unique_ptr<Homa::OutMessage>(&outMessage))));
     EXPECT_CALL(transport, getDriver()).Times(2);
     EXPECT_CALL(driver, getLocalAddress()).WillOnce(Return(replyAddress));
     EXPECT_CALL(driver,
                 addressToWireFormat(Eq(replyAddress),
                                     An<Homa::Driver::WireFormatAddress*>()));
     EXPECT_CALL(outMessage,
-                prepend(An<const void*>(), Eq(sizeof(Proto::RequestHeader))));
+                append(An<const void*>(), Eq(sizeof(Proto::RequestHeader))));
+    EXPECT_CALL(outMessage, append(Eq(buffer), Eq(sizeof(buffer))));
     EXPECT_CALL(outMessage, send(Eq(0xFEED)));
 
-    rpc->send(0xFEED, std::move(message));
+    rpc->send(0xFEED, buffer, sizeof(buffer));
 
     EXPECT_TRUE(rpc->request);
 
@@ -122,16 +113,13 @@ TEST_F(RpcImplTest, send)
 
 TEST_F(RpcImplTest, receive)
 {
+    Homa::InMessage* message = rpc->receive();
+    EXPECT_EQ(nullptr, message);
+
     rpc->response = std::move(Homa::unique_ptr<Homa::InMessage>(&inMessage));
-    {
-        Homa::unique_ptr<Homa::InMessage> message = rpc->receive();
-        EXPECT_EQ(&inMessage, message.get());
-        EXPECT_CALL(inMessage, release());
-    }
-    {
-        Homa::unique_ptr<Homa::InMessage> message = rpc->receive();
-        EXPECT_FALSE(message);
-    }
+
+    message = rpc->receive();
+    EXPECT_EQ(&inMessage, message);
 }
 
 TEST_F(RpcImplTest, checkStatus)

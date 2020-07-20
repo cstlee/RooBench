@@ -292,15 +292,7 @@ RpcBenchmark::client_poll()
                 assert(request_config.size >=
                        sizeof(WireFormat::Benchmark::Request));
                 assert(request_config.size <= sizeof(buf));
-                Homa::unique_ptr<Homa::OutMessage> message =
-                    rpc->allocRequest();
-                int bytesRemaining = request_config.size;
-                while (bytesRemaining > 0) {
-                    int bytesToCopy = std::min(bytesRemaining, buf_size);
-                    message->append(buf, bytesToCopy);
-                    bytesRemaining -= bytesToCopy;
-                }
-                rpc->send(dest, std::move(message));
+                rpc->send(dest, buf, request_config.size);
                 rpcs.push_back(std::move(rpc));
                 poll_start_cycles = PerfUtils::Cycles::rdtsc();
                 socket->poll();
@@ -389,14 +381,7 @@ RpcBenchmark::handleBenchmarkTask(
     const BenchConfig::Response& response_config =
         task_config.responses.front();
     assert(response_config.size <= sizeof(buf));
-    Homa::unique_ptr<Homa::OutMessage> message = task->allocOutMessage();
-    int bytesRemaining = response_config.size;
-    while (bytesRemaining > 0) {
-        int bytesToCopy = std::min(bytesRemaining, buf_size);
-        message->append(buf, bytesToCopy);
-        bytesRemaining -= bytesToCopy;
-    }
-    task->reply(std::move(message));
+    task->reply(buf, response_config.size);
 
     // Update stats
     task_stats.at(request.taskType)

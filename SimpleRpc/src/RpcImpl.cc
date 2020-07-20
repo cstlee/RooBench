@@ -38,43 +38,34 @@ RpcImpl::RpcImpl(SocketImpl* socket, Proto::RpcId rpcId)
 RpcImpl::~RpcImpl() = default;
 
 /**
- * @copydoc RpcImpl::allocRequest()
- */
-Homa::unique_ptr<Homa::OutMessage>
-RpcImpl::allocRequest()
-{
-    Homa::unique_ptr<Homa::OutMessage> message = socket->transport->alloc();
-    message->reserve(sizeof(Proto::RequestHeader));
-    return message;
-}
-
-/**
  * @copydoc RpcImpl::send()
  */
 void
-RpcImpl::send(Homa::Driver::Address destination,
-              Homa::unique_ptr<Homa::OutMessage> message)
+RpcImpl::send(Homa::Driver::Address destination, const void* request,
+              size_t length)
 {
     SpinLock::Lock lock(mutex);
-    request = std::move(message);
-    Perf::counters.tx_message_bytes.add(request->length());
+    Homa::unique_ptr<Homa::OutMessage> message = socket->transport->alloc();
     Homa::Driver::Address replyAddress =
         socket->transport->getDriver()->getLocalAddress();
     Proto::RequestHeader outboundHeader(rpcId);
     socket->transport->getDriver()->addressToWireFormat(
         replyAddress, &outboundHeader.replyAddress);
-    request->prepend(&outboundHeader, sizeof(outboundHeader));
-    request->send(destination);
+    message->append(&outboundHeader, sizeof(outboundHeader));
+    message->append(request, length);
+    Perf::counters.tx_message_bytes.add(sizeof(Proto::RequestHeader) + length);
+    message->send(destination);
+    this->request = std::move(message);
 }
 
 /**
  * @copydoc RpcImpl::receive()
  */
-Homa::unique_ptr<Homa::InMessage>
+Homa::InMessage*
 RpcImpl::receive()
 {
     SpinLock::Lock lock(mutex);
-    return std::move(response);
+    return response.get();
 }
 
 /**

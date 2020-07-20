@@ -36,10 +36,9 @@ class RpcImpl : public Rpc {
   public:
     explicit RpcImpl(SocketImpl* socket, Proto::RpcId rpcId);
     virtual ~RpcImpl();
-    virtual Homa::unique_ptr<Homa::OutMessage> allocRequest();
-    virtual void send(Homa::Driver::Address destination,
-                      Homa::unique_ptr<Homa::OutMessage> message);
-    virtual Homa::unique_ptr<Homa::InMessage> receive();
+    virtual void send(Homa::Driver::Address destination, const void* request,
+                      size_t length);
+    virtual Homa::InMessage* receive();
     virtual Status checkStatus();
     virtual void wait();
 
