@@ -83,10 +83,8 @@ SocketImpl::poll()
     transport->poll();
 
     // Keep track of time spent doing active processing versus idle.
-    Perf::Timer activityTimer;
-    activityTimer.split();
-    uint64_t activeTime = 0;
-    uint64_t idleTime = 0;
+    Perf::Timer timer;
+    Perf::Timer activeTimer;
 
     // Process incoming messages
     for (Homa::unique_ptr<Homa::InMessage> message = transport->receive();
@@ -120,9 +118,8 @@ SocketImpl::poll()
         } else {
             WARNING("Unexpected protocol message received.");
         }
-        activeTime += activityTimer.split();
+        Perf::counters.active_cycles.add(activeTimer.split());
     }
-    idleTime += activityTimer.split();
 
     // Check detached ServerTasks
     {
@@ -130,23 +127,19 @@ SocketImpl::poll()
         auto it = detachedTasks.begin();
         while (it != detachedTasks.end()) {
             ServerTaskImpl* task = *it;
-            idleTime += activityTimer.split();
             bool not_done = task->poll();
-            activityTimer.split();
+            activeTimer.split();
             if (not_done) {
                 ++it;
             } else {
                 // ServerTask is done polling
                 it = detachedTasks.erase(it);
                 delete task;
-                activeTime += activityTimer.split();
+                Perf::counters.active_cycles.add(activeTimer.split());
             }
         }
-        idleTime += activityTimer.split();
     }
-
-    Perf::counters.active_cycles.add(activeTime);
-    Perf::counters.idle_cycles.add(idleTime);
+    Perf::counters.total_cycles.add(timer.split());
 }
 
 /**

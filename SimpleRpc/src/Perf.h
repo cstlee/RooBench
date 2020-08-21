@@ -29,7 +29,7 @@ namespace Perf {
  */
 struct Counters {
     /**
-     * Wrapper class for individual counter entires to
+     * Wrapper class for individual counter entries.
      */
     template <typename T>
     struct Stat : private std::atomic<T> {
@@ -43,6 +43,8 @@ struct Counters {
 
         /**
          * Add the value of another Stat to this Stat.
+         *
+         * This method is thread safe.
          */
         void add(const Stat<T>& other)
         {
@@ -52,14 +54,19 @@ struct Counters {
 
         /**
          * Add the given value to this Stat.
+         *
+         * This method is not thread-safe.
          */
         void add(T val)
         {
-            this->fetch_add(val, std::memory_order_relaxed);
+            this->store(this->load(std::memory_order_relaxed) + val,
+                        std::memory_order_relaxed);
         }
 
         /**
          * Return the stat value.
+         *
+         * This method is thread safe.
          */
         T get() const
         {
@@ -71,8 +78,8 @@ struct Counters {
      * Default constructor.
      */
     Counters()
-        : active_cycles(0)
-        , idle_cycles(0)
+        : total_cycles(0)
+        , active_cycles(0)
         , tx_message_bytes(0)
         , rx_message_bytes(0)
     {}
@@ -87,8 +94,8 @@ struct Counters {
      */
     void add(const Counters* other)
     {
+        total_cycles.add(other->total_cycles);
         active_cycles.add(other->active_cycles);
-        idle_cycles.add(other->idle_cycles);
         tx_message_bytes.add(other->tx_message_bytes);
         rx_message_bytes.add(other->rx_message_bytes);
     }
@@ -99,16 +106,16 @@ struct Counters {
     void dumpStats(Stats* stats)
     {
         stats->active_cycles = active_cycles.get();
-        stats->idle_cycles = idle_cycles.get();
+        stats->idle_cycles = total_cycles.get() - active_cycles.get();
         stats->tx_message_bytes = tx_message_bytes.get();
         stats->rx_message_bytes = rx_message_bytes.get();
     }
 
-    /// CPU time actively processing RooPCs and ServerTask messages in cycles.
-    Stat<uint64_t> active_cycles;
+    /// CPU time running the RPC poll loop in cycles.
+    Stat<uint64_t> total_cycles;
 
-    /// CPU time running with nothing to do in cycles.
-    Stat<uint64_t> idle_cycles;
+    /// CPU time actively processing RPCs and ServerTask messages in cycles.
+    Stat<uint64_t> active_cycles;
 
     /// Number of application message bytes sent.
     Stat<uint64_t> tx_message_bytes;
@@ -137,10 +144,10 @@ extern thread_local ThreadCounters counters;
 class Timer {
   public:
     /**
-     * Construct a new uninitialized Timer.
+     * Construct a new Timer.
      */
     Timer()
-        : split_tsc(0)
+        : split_tsc(PerfUtils::Cycles::rdtsc())
     {}
 
     /**

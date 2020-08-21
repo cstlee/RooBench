@@ -86,7 +86,6 @@ bool
 ServerTaskImpl::poll()
 {
     Perf::Timer timer;
-    timer.split();
     if (request->dropped()) {
         // Nothing left to do
         Perf::counters.active_cycles.add(timer.split());
@@ -101,7 +100,6 @@ ServerTaskImpl::poll()
         return false;
     } else {
         // Response in progress
-        Perf::counters.idle_cycles.add(timer.split());
         return true;
     }
 }
