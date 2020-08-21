@@ -87,9 +87,12 @@ def get_bench_stats(data_dir, server_name):
     latencies = end_data["client_stats"]["latencies"]
     latencies.sort()
     latency_stats = {}
+    latency_stats["raw"] = end_data["client_stats"]["latencies"] 
     latency_stats["count"] = len(latencies) 
     latency_stats["00"] = latencies[0]
+    latency_stats["25"] = latencies[int(0.25 * len(latencies))]
     latency_stats["50"] = latencies[int(0.5 * len(latencies))]
+    latency_stats["75"] = latencies[int(0.75 * len(latencies))]
     latency_stats["90"] = latencies[int(0.9 * len(latencies))]
     latency_stats["99"] = latencies[int(0.99 * len(latencies))]
 
@@ -111,13 +114,15 @@ def get_bench_stats(data_dir, server_name):
 def print_latency(bench_stats):
     latency_stats = bench_stats["client_latency"]
     latency_min = latency_stats["00"] / 1000.0
+    latency_25 = latency_stats["25"] / 1000.0
     latency_med = latency_stats["50"] / 1000.0
+    latency_75 = latency_stats["75"] / 1000.0
     latency_90 = latency_stats["90"] / 1000.0
     latency_99 = latency_stats["99"] / 1000.0
     print "Client Latency (%9d samples)" % bench_stats["client_latency"]["count"]
-    print "----------------------------------"
-    print " Med (us)  Min (us)  90% (us)  99% (us) "
-    print "%8.3f  %8.3f  %8.3f  %8.3f" % (latency_med, latency_min, latency_90, latency_99)
+    print "------------------------------------------------------------"
+    print " Med (us)  Min (us)  25% (us)  75% (us)  90% (us)  99% (us) "
+    print "%8.3f  %8.3f  %8.3f  %8.3f  %8.3f  %8.3f" % (latency_med, latency_min, latency_25, latency_75, latency_90, latency_99)
 
 def print_net_usage(client_names, server_names, bench_stats, transport_stats):
     print "Network Usage Statistics:"
