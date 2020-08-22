@@ -85,7 +85,6 @@ RpcBenchmark::RpcBenchmark(nlohmann::json bench_config, std::string server_name,
     , stats_mutex()
     , client_stats()
     , task_stats(create_task_stats_map(config.tasks))
-    , active_cycles(0)
 {
     Homa::Debug::setLogPolicy(Homa::Debug::logPolicyFromString("ERROR"));
     SimpleRpc::Debug::setLogPolicy(
@@ -105,8 +104,11 @@ void
 RpcBenchmark::run_benchmark()
 {
     while (run) {
-        server_poll();
-        client_poll();
+        if (run_client) {
+            client_poll();
+        } else {
+            server_poll();
+        }
     }
 }
 
@@ -161,7 +163,6 @@ RpcBenchmark::dump_stats()
         nlohmann::json bench_stats_json;
         bench_stats_json["timestamp"] = timestamp;
         bench_stats_json["cycles_per_second"] = PerfUtils::Cycles::perSecond();
-        bench_stats_json["active_cycles"] = active_cycles.load();
 
         // Task stats
         std::vector<nlohmann::json> task_stats_json_list;
@@ -245,15 +246,10 @@ void
 RpcBenchmark::server_poll()
 {
     socket->poll();
-    uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
-    uint64_t stop_cycles = start_cycles;
     for (SimpleRpc::unique_ptr<SimpleRpc::ServerTask> task = socket->receive();
          task; task = socket->receive()) {
         dispatch(std::move(task));
-        stop_cycles = PerfUtils::Cycles::rdtsc();
     }
-    active_cycles.fetch_add(stop_cycles - start_cycles,
-                            std::memory_order_relaxed);
 }
 
 /**
@@ -262,10 +258,6 @@ RpcBenchmark::server_poll()
 void
 RpcBenchmark::client_poll()
 {
-    if (!run_client) {
-        return;
-    }
-
     if (client_running.test_and_set()) {
         return;
     }
@@ -274,9 +266,6 @@ RpcBenchmark::client_poll()
     char buf[buf_size];
 
     bool rpc_failed = false;
-
-    uint64_t poll_start_cycles = 0;
-    uint64_t poll_cycles = 0;
 
     uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
     for (const BenchConfig::Client::Phase& phase : config.client.phases) {
@@ -294,12 +283,9 @@ RpcBenchmark::client_poll()
                 assert(request_config.size <= sizeof(buf));
                 rpc->send(dest, buf, request_config.size);
                 rpcs.push_back(std::move(rpc));
-                poll_start_cycles = PerfUtils::Cycles::rdtsc();
                 socket->poll();
-                poll_cycles += (PerfUtils::Cycles::rdtsc() - poll_start_cycles);
             }
         }
-        poll_start_cycles = PerfUtils::Cycles::rdtsc();
         for (auto it = rpcs.begin(); it != rpcs.end(); ++it) {
             SimpleRpc::Rpc* rpc = it->get();
             while (rpc->checkStatus() == SimpleRpc::Rpc::Status::IN_PROGRESS) {
@@ -309,8 +295,6 @@ RpcBenchmark::client_poll()
                 }
             }
             rpc->wait();
-            poll_cycles += (PerfUtils::Cycles::rdtsc() - poll_start_cycles);
-            poll_start_cycles = PerfUtils::Cycles::rdtsc();
             if (rpc->checkStatus() == SimpleRpc::Rpc::Status::FAILED) {
                 rpc_failed = true;
                 break;
@@ -321,9 +305,6 @@ RpcBenchmark::client_poll()
         }
     }
     uint64_t stop_cycles = PerfUtils::Cycles::rdtsc();
-    active_cycles.fetch_add(
-        PerfUtils::Cycles::rdtsc() - start_cycles - poll_cycles,
-        std::memory_order_relaxed);
     client_running.clear();
 
     if (!rpc_failed) {

@@ -104,7 +104,7 @@ def get_bench_stats(data_dir, server_name):
 
     data["elapsed_time"] = stat_diff("timestamp", start_data, end_data) / cps
     data["cycles_per_second"] = cps
-    data["active_cycles"] = stat_diff("active_cycles", start_data, end_data)
+    data["active_cycles"] = 0
     data["client_latency"] = latency_stats
     data["client_count"] = end_data["client_stats"]["count"] - start_data["client_stats"]["count"]
     data["task_stats"] = task_stats

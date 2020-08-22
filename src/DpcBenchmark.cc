@@ -86,7 +86,6 @@ DpcBenchmark::DpcBenchmark(nlohmann::json bench_config, std::string server_name,
     , stats_mutex()
     , client_stats()
     , task_stats(create_task_stats_map(config.tasks))
-    , active_cycles(0)
 {
     Homa::Debug::setLogPolicy(Homa::Debug::logPolicyFromString("ERROR"));
     Roo::Debug::setLogPolicy(Roo::Debug::logPolicyFromString("ERROR"));
@@ -105,8 +104,11 @@ void
 DpcBenchmark::run_benchmark()
 {
     while (run) {
-        server_poll();
-        client_poll();
+        if (run_client) {
+            client_poll();
+        } else {
+            server_poll();
+        }
     }
 }
 
@@ -161,7 +163,6 @@ DpcBenchmark::dump_stats()
         nlohmann::json bench_stats_json;
         bench_stats_json["timestamp"] = timestamp;
         bench_stats_json["cycles_per_second"] = PerfUtils::Cycles::perSecond();
-        bench_stats_json["active_cycles"] = active_cycles.load();
 
         // Task stats
         std::vector<nlohmann::json> task_stats_json_list;
@@ -245,15 +246,10 @@ void
 DpcBenchmark::server_poll()
 {
     socket->poll();
-    uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
-    uint64_t stop_cycles = start_cycles;
     for (Roo::unique_ptr<Roo::ServerTask> task = socket->receive(); task;
          task = socket->receive()) {
         dispatch(std::move(task));
-        stop_cycles = PerfUtils::Cycles::rdtsc();
     }
-    active_cycles.fetch_add(stop_cycles - start_cycles,
-                            std::memory_order_relaxed);
 }
 
 /**
@@ -262,19 +258,12 @@ DpcBenchmark::server_poll()
 void
 DpcBenchmark::client_poll()
 {
-    if (!run_client) {
-        return;
-    }
-
     if (client_running.test_and_set()) {
         return;
     }
 
     const int buf_size = 1000000;
     char buf[buf_size];
-
-    uint64_t poll_start_cycles = 0;
-    uint64_t poll_cycles = 0;
 
     uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
     Roo::unique_ptr<Roo::RooPC> rpc = socket->allocRooPC();
@@ -290,12 +279,9 @@ DpcBenchmark::client_poll()
                        sizeof(WireFormat::Benchmark::Request));
                 assert(request_config.size <= sizeof(buf));
                 rpc->send(dest, buf, request_config.size);
-                poll_start_cycles = PerfUtils::Cycles::rdtsc();
                 socket->poll();
-                poll_cycles += (PerfUtils::Cycles::rdtsc() - poll_start_cycles);
             }
         }
-        poll_start_cycles = PerfUtils::Cycles::rdtsc();
         while (rpc->checkStatus() == Roo::RooPC::Status::IN_PROGRESS) {
             socket->poll();
             if (!run_client) {
@@ -303,14 +289,10 @@ DpcBenchmark::client_poll()
             }
         }
         rpc->wait();
-        poll_cycles += (PerfUtils::Cycles::rdtsc() - poll_start_cycles);
     }
     uint64_t stop_cycles = PerfUtils::Cycles::rdtsc();
     Roo::RooPC::Status status = rpc->checkStatus();
     rpc.reset();
-    active_cycles.fetch_add(
-        PerfUtils::Cycles::rdtsc() - start_cycles - poll_cycles,
-        std::memory_order_relaxed);
     client_running.clear();
 
     if (status == Roo::RooPC::Status::COMPLETED) {
