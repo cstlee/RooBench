@@ -66,6 +66,7 @@ ServerTaskImpl::getRequest()
 void
 ServerTaskImpl::reply(const void* response, size_t length)
 {
+    Perf::Timer timer;
     Homa::unique_ptr<Homa::OutMessage> message = socket->transport->alloc();
     Proto::ResponseHeader header(rpcId);
     message->append(&header, sizeof(header));
@@ -73,6 +74,7 @@ ServerTaskImpl::reply(const void* response, size_t length)
     Perf::counters.tx_message_bytes.add(sizeof(Proto::ResponseHeader) + length);
     message->send(replyAddress);
     this->response = std::move(message);
+    Perf::counters.server_api_cycles.add(timer.split());
 }
 
 /**
@@ -88,15 +90,15 @@ ServerTaskImpl::poll()
     Perf::Timer timer;
     if (request->dropped()) {
         // Nothing left to do
-        Perf::counters.active_cycles.add(timer.split());
+        Perf::counters.poll_active_cycles.add(timer.split());
         return false;
     } else if (!response) {
         // No response sent.
-        Perf::counters.active_cycles.add(timer.split());
+        Perf::counters.poll_active_cycles.add(timer.split());
         return false;
     } else if (response->getStatus() != Homa::OutMessage::Status::IN_PROGRESS) {
         // Response completed or failed
-        Perf::counters.active_cycles.add(timer.split());
+        Perf::counters.poll_active_cycles.add(timer.split());
         return false;
     } else {
         // Response in progress
@@ -110,10 +112,12 @@ ServerTaskImpl::poll()
 void
 ServerTaskImpl::destroy()
 {
+    Perf::Timer timer;
     // Don't delete the ServerTask yet.  Just pass it to the socket so it can
     // make sure that any outgoing messages are competely sent.
     detached.store(true);
     socket->remandTask(this);
+    Perf::counters.server_api_cycles.add(timer.split());
 }
 
 }  // namespace SimpleRpc

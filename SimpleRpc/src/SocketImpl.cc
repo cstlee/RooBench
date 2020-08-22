@@ -51,10 +51,12 @@ SocketImpl::~SocketImpl() {}
 SimpleRpc::unique_ptr<Rpc>
 SocketImpl::allocRpc()
 {
+    Perf::Timer timer;
     SpinLock::Lock lock_socket(mutex);
     Proto::RpcId rpcId = allocRpcId();
     RpcImpl* rpc = new RpcImpl(this, rpcId);
     rpcs.insert({rpcId, rpc});
+    Perf::counters.client_api_cycles.add(timer.split());
     return SimpleRpc::unique_ptr<Rpc>(rpc);
 }
 
@@ -64,11 +66,13 @@ SocketImpl::allocRpc()
 SimpleRpc::unique_ptr<ServerTask>
 SocketImpl::receive()
 {
+    Perf::Timer timer;
     SpinLock::Lock lock_socket(mutex);
     SimpleRpc::unique_ptr<ServerTask> task;
     if (!pendingTasks.empty()) {
         task = SimpleRpc::unique_ptr<ServerTask>(pendingTasks.front());
         pendingTasks.pop_front();
+        Perf::counters.server_api_cycles.add(timer.split());
     }
     return task;
 }
@@ -118,7 +122,7 @@ SocketImpl::poll()
         } else {
             WARNING("Unexpected protocol message received.");
         }
-        Perf::counters.active_cycles.add(activeTimer.split());
+        Perf::counters.poll_active_cycles.add(activeTimer.split());
     }
 
     // Check detached ServerTasks
@@ -135,11 +139,11 @@ SocketImpl::poll()
                 // ServerTask is done polling
                 it = detachedTasks.erase(it);
                 delete task;
-                Perf::counters.active_cycles.add(activeTimer.split());
+                Perf::counters.poll_active_cycles.add(activeTimer.split());
             }
         }
     }
-    Perf::counters.total_cycles.add(timer.split());
+    Perf::counters.poll_total_cycles.add(timer.split());
 }
 
 /**

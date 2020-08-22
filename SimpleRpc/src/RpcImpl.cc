@@ -44,6 +44,7 @@ void
 RpcImpl::send(Homa::Driver::Address destination, const void* request,
               size_t length)
 {
+    Perf::Timer timer;
     SpinLock::Lock lock(mutex);
     Homa::unique_ptr<Homa::OutMessage> message = socket->transport->alloc();
     Homa::Driver::Address replyAddress =
@@ -56,6 +57,7 @@ RpcImpl::send(Homa::Driver::Address destination, const void* request,
     Perf::counters.tx_message_bytes.add(sizeof(Proto::RequestHeader) + length);
     message->send(destination);
     this->request = std::move(message);
+    Perf::counters.client_api_cycles.add(timer.split());
 }
 
 /**
@@ -103,9 +105,11 @@ RpcImpl::wait()
 void
 RpcImpl::destroy()
 {
+    Perf::Timer timer;
     // Don't actually free the object yet.  Return contol to the managing
     // socket so it can do some clean up.
     socket->dropRpc(this);
+    Perf::counters.client_api_cycles.add(timer.split());
 }
 
 /**
