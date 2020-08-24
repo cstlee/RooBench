@@ -127,6 +127,7 @@ DpcBenchmark::dump_stats()
         nlohmann::json roo_stats;
         roo_stats["timestamp"] = stats.timestamp;
         roo_stats["cycles_per_second"] = stats.cycles_per_second;
+        roo_stats["api_cycles"] = stats.api_cycles;
         roo_stats["active_cycles"] = stats.active_cycles;
         roo_stats["idle_cycles"] = stats.idle_cycles;
         roo_stats["tx_message_bytes"] = stats.tx_message_bytes;

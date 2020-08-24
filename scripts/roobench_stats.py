@@ -50,6 +50,7 @@ def get_transport_stats(data_dir, server_name):
 
     data["elapsed_time"] = stat_diff("timestamp", start_data, end_data) / cps
     data["cycles_per_second"] = cps
+    data["api_cycles"] = stat_diff("api_cycles", start_data, end_data)
     data["active_cycles"] = stat_diff("active_cycles", start_data, end_data)
     data["idle_cycles"] = stat_diff("idle_cycles", start_data, end_data)
     data["tx_message_bytes"] = stat_diff("tx_message_bytes", start_data, end_data)
@@ -204,13 +205,13 @@ def print_cpu_usage_stats(client_names, server_names, bench_stats, transport_sta
         cps_b = bench_stats[host_name]['cycles_per_second']
         cps = cps_t
         duration = transport_stats[host_name]['elapsed_time']
-        cycles = bench_stats[host_name]['active_cycles'] + transport_stats[host_name]['active_cycles']
+        cycles = transport_stats[host_name]['api_cycles'] + transport_stats[host_name]['active_cycles']
         print host_name.rjust(10, ' ') + \
             " %12d " % np.divide(cycles, count) + \
             " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
             " %12.3f " % np.divide(cycles, cps * duration) + \
             " %12d " % (cycles)
-        cycles = bench_stats[host_name]['active_cycles']
+        cycles = transport_stats[host_name]['api_cycles']
         print "(fg)".rjust(10, ' ') + \
             " %12d " % np.divide(cycles, count) + \
             " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
@@ -222,7 +223,7 @@ def print_cpu_usage_stats(client_names, server_names, bench_stats, transport_sta
             " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
             " %12.3f " % np.divide(cycles, cps * duration) + \
             " %12d " % (cycles)
-        fg_time = bench_stats[host_name]['active_cycles'] / cps
+        fg_time = transport_stats[host_name]['api_cycles'] /cps
         bg_time = transport_stats[host_name]['active_cycles'] /cps
         return (fg_time, bg_time)
 

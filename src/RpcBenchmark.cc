@@ -127,6 +127,7 @@ RpcBenchmark::dump_stats()
         nlohmann::json rpc_stats;
         rpc_stats["timestamp"] = stats.timestamp;
         rpc_stats["cycles_per_second"] = stats.cycles_per_second;
+        rpc_stats["api_cycles"] = stats.api_cycles;
         rpc_stats["active_cycles"] = stats.active_cycles;
         rpc_stats["idle_cycles"] = stats.idle_cycles;
         rpc_stats["tx_message_bytes"] = stats.tx_message_bytes;
