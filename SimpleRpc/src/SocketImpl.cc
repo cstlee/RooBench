@@ -35,6 +35,8 @@ SocketImpl::SocketImpl(Homa::Transport* transport)
     , socketId(transport->getId())
     , nextSequenceNumber(1)
     , mutex()
+    , rpcPool()
+    , taskPool()
     , rpcs()
     , pendingTasks()
     , detachedTasks()
@@ -54,7 +56,7 @@ SocketImpl::allocRpc()
     Perf::Timer timer;
     SpinLock::Lock lock_socket(mutex);
     Proto::RpcId rpcId = allocRpcId();
-    RpcImpl* rpc = new RpcImpl(this, rpcId);
+    RpcImpl* rpc = rpcPool.construct(this, rpcId);
     rpcs.insert({rpcId, rpc});
     Perf::counters.client_api_cycles.add(timer.split());
     return SimpleRpc::unique_ptr<Rpc>(rpc);
@@ -102,7 +104,7 @@ SocketImpl::poll()
             Perf::counters.rx_message_bytes.add(message->length() -
                                                 sizeof(header));
             ServerTaskImpl* task =
-                new ServerTaskImpl(this, &header, std::move(message));
+                taskPool.construct(this, &header, std::move(message));
             SpinLock::Lock lock_socket(mutex);
             pendingTasks.push_back(task);
         } else if (common.opcode == Proto::Opcode::Response) {
@@ -138,7 +140,7 @@ SocketImpl::poll()
             } else {
                 // ServerTask is done polling
                 it = detachedTasks.erase(it);
-                delete task;
+                taskPool.destroy(task);
                 Perf::counters.poll_active_cycles.add(activeTimer.split());
             }
         }
@@ -154,7 +156,7 @@ SocketImpl::dropRpc(RpcImpl* rpc)
 {
     SpinLock::Lock lock_socket(mutex);
     rpcs.erase(rpc->getId());
-    delete rpc;
+    rpcPool.destroy(rpc);
 }
 
 /**

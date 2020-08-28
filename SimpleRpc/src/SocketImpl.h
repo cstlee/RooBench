@@ -25,14 +25,13 @@
 #include <memory>
 #include <unordered_map>
 
+#include "ObjectPool.h"
 #include "Proto.h"
+#include "RpcImpl.h"
+#include "ServerTaskImpl.h"
 #include "SpinLock.h"
 
 namespace SimpleRpc {
-
-// Forward declaration
-class RpcImpl;
-class ServerTaskImpl;
 
 /**
  * Implementation of SimpleRpc::Socket.
@@ -67,6 +66,12 @@ class SocketImpl : public Socket {
 
     // Monitor style mutex.
     SpinLock mutex;
+
+    /// RpcImpl allocator.
+    ObjectPool<RpcImpl> rpcPool;
+
+    /// ServerTaskImpl allocator.
+    ObjectPool<ServerTaskImpl> taskPool;
 
     /// Tracks the set of Rpc objects that were initiated by this
     /// socket.
