@@ -35,8 +35,7 @@ namespace SimpleRpc {
 ServerTaskImpl::ServerTaskImpl(SocketImpl* socket,
                                Proto::RequestHeader const* requestHeader,
                                Homa::unique_ptr<Homa::InMessage> request)
-    : detached(false)
-    , socket(socket)
+    : socket(socket)
     , rpcId(requestHeader->rpcId)
     , request(std::move(request))
     , replyAddress(socket->transport->getDriver()->getAddress(
@@ -78,45 +77,15 @@ ServerTaskImpl::reply(const void* response, size_t length)
 }
 
 /**
- * Perform an incremental amount of any necessary background processing.
- *
- * @return
- *      True, if more background processing is needed (i.e. poll needs to be
- *      called again). False, otherwise.
- */
-bool
-ServerTaskImpl::poll()
-{
-    Perf::Timer timer;
-    if (request->dropped()) {
-        // Nothing left to do
-        Perf::counters.poll_active_cycles.add(timer.split());
-        return false;
-    } else if (!response) {
-        // No response sent.
-        Perf::counters.poll_active_cycles.add(timer.split());
-        return false;
-    } else if (response->getStatus() != Homa::OutMessage::Status::IN_PROGRESS) {
-        // Response completed or failed
-        Perf::counters.poll_active_cycles.add(timer.split());
-        return false;
-    } else {
-        // Response in progress
-        return true;
-    }
-}
-
-/**
  * @copydoc ServerTask::destroy()
  */
 void
 ServerTaskImpl::destroy()
 {
     Perf::Timer timer;
-    // Don't delete the ServerTask yet.  Just pass it to the socket so it can
-    // make sure that any outgoing messages are competely sent.
-    detached.store(true);
-    socket->remandTask(this);
+    socket->dropTask(this);  // Do not access _this_ after this point as the
+                             // destructor will have been called and the memory
+                             // may be deallocated.
     Perf::counters.server_api_cycles.add(timer.split());
 }
 

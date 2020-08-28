@@ -39,13 +39,17 @@ SocketImpl::SocketImpl(Homa::Transport* transport)
     , taskPool()
     , rpcs()
     , pendingTasks()
-    , detachedTasks()
 {}
 
 /**
  * SocketImpl destructor.
  */
-SocketImpl::~SocketImpl() {}
+SocketImpl::~SocketImpl()
+{
+    for (ServerTaskImpl* task : pendingTasks) {
+        taskPool.destroy(task);
+    }
+}
 
 /**
  * @copydoc SimpleRpc::Socket::allocRpc()
@@ -126,25 +130,6 @@ SocketImpl::poll()
         }
         Perf::counters.poll_active_cycles.add(activeTimer.split());
     }
-
-    // Check detached ServerTasks
-    {
-        SpinLock::Lock lock_socket(mutex);
-        auto it = detachedTasks.begin();
-        while (it != detachedTasks.end()) {
-            ServerTaskImpl* task = *it;
-            bool not_done = task->poll();
-            activeTimer.split();
-            if (not_done) {
-                ++it;
-            } else {
-                // ServerTask is done polling
-                it = detachedTasks.erase(it);
-                taskPool.destroy(task);
-                Perf::counters.poll_active_cycles.add(activeTimer.split());
-            }
-        }
-    }
     Perf::counters.poll_total_cycles.add(timer.split());
 }
 
@@ -160,14 +145,13 @@ SocketImpl::dropRpc(RpcImpl* rpc)
 }
 
 /**
- * Pass custody of a detached ServerTask to this socket so that this socket
- * can ensure its outbound message are completely sent.
+ * Discard a the given ServerTask.
  */
 void
-SocketImpl::remandTask(ServerTaskImpl* task)
+SocketImpl::dropTask(ServerTaskImpl* task)
 {
     SpinLock::Lock lock_socket(mutex);
-    detachedTasks.push_back(task);
+    taskPool.destroy(task);
 }
 
 /**

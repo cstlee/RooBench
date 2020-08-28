@@ -49,7 +49,7 @@ class SocketImpl : public Socket {
     }
 
     void dropRpc(RpcImpl* rpc);
-    void remandTask(ServerTaskImpl* task);
+    void dropTask(ServerTaskImpl* task);
 
     /// Transport through which messages can be sent and received.
     Homa::Transport* const transport;
@@ -80,10 +80,6 @@ class SocketImpl : public Socket {
     /// Collection of ServerTask objects (incoming requests) that haven't been
     /// requested by the application.
     std::deque<ServerTaskImpl*> pendingTasks;
-
-    /// ServerTask objects that have been processed by the application and
-    /// remanded to the care of the Socket to complete transmission.
-    std::deque<ServerTaskImpl*> detachedTasks;
 };
 
 }  // namespace SimpleRpc

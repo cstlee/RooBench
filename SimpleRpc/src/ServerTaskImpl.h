@@ -41,16 +41,11 @@ class ServerTaskImpl : public ServerTask {
     virtual ~ServerTaskImpl();
     virtual Homa::InMessage* getRequest();
     virtual void reply(const void* response, size_t length);
-    bool poll();
 
   protected:
     virtual void destroy();
 
   private:
-    /// True if the ServerTask is no longer held by the application and is being
-    /// processed by the Socket.
-    std::atomic<bool> detached;
-
     // The socket that manages this ServerTask.
     SocketImpl* const socket;
 

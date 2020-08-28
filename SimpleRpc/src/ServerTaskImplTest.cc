@@ -52,7 +52,7 @@ class ServerTaskImplTest : public ::testing::Test {
     {
         if (task != nullptr) {
             EXPECT_CALL(inMessage, release());
-            delete task;
+            socket->taskPool.destroy(task);
         }
         delete socket;
     }
@@ -67,7 +67,7 @@ class ServerTaskImplTest : public ::testing::Test {
         Proto::RequestHeader header;
         header.rpcId = Proto::RpcId(1, 1);
         Homa::unique_ptr<Homa::InMessage> request(&inMessage);
-        task = new ServerTaskImpl(socket, &header, std::move(request));
+        task = socket->taskPool.construct(socket, &header, std::move(request));
     }
 
     Mock::Homa::MockTransport transport;
@@ -131,54 +131,14 @@ TEST_F(ServerTaskImplTest, reply)
     EXPECT_CALL(outMessage, release());
 }
 
-TEST_F(ServerTaskImplTest, poll_dropped)
-{
-    initDefaultTask();
-    EXPECT_CALL(inMessage, dropped()).WillOnce(Return(true));
-    EXPECT_FALSE(task->poll());
-}
-
-TEST_F(ServerTaskImplTest, poll_no_response)
-{
-    initDefaultTask();
-    EXPECT_CALL(inMessage, dropped()).WillOnce(Return(false));
-    ASSERT_FALSE(task->response);
-    EXPECT_FALSE(task->poll());
-}
-
-TEST_F(ServerTaskImplTest, poll_failed)
-{
-    initDefaultTask();
-    task->response.reset(&outMessage);
-    EXPECT_CALL(inMessage, dropped()).WillOnce(Return(false));
-    EXPECT_CALL(outMessage, getStatus)
-        .WillOnce(Return(Homa::OutMessage::Status::FAILED));
-    EXPECT_FALSE(task->poll());
-
-    EXPECT_CALL(outMessage, release());
-}
-
-TEST_F(ServerTaskImplTest, poll_in_progress)
-{
-    initDefaultTask();
-    task->response.reset(&outMessage);
-    EXPECT_CALL(inMessage, dropped()).WillOnce(Return(false));
-    EXPECT_CALL(outMessage, getStatus)
-        .WillOnce(Return(Homa::OutMessage::Status::IN_PROGRESS));
-    EXPECT_TRUE(task->poll());
-
-    EXPECT_CALL(outMessage, release());
-}
-
 TEST_F(ServerTaskImplTest, destroy)
 {
     initDefaultTask();
-
-    EXPECT_FALSE(task->detached);
-
+    EXPECT_EQ(1, socket->taskPool.outstandingObjects);
+    EXPECT_CALL(inMessage, release());
     task->destroy();
-
-    EXPECT_TRUE(task->detached);
+    EXPECT_EQ(0, socket->taskPool.outstandingObjects);
+    task = nullptr;
 }
 
 }  // namespace

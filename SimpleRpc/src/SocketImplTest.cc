@@ -63,7 +63,7 @@ class SocketImplTest : public ::testing::Test {
         Proto::RequestHeader header;
         header.rpcId = rpcId;
         Homa::unique_ptr<Homa::InMessage> request(&inMessage);
-        return new ServerTaskImpl(socket, &header, std::move(request));
+        return socket->taskPool.construct(socket, &header, std::move(request));
     }
 
     Mock::Homa::MockTransport transport;
@@ -243,46 +243,6 @@ TEST_F(SocketImplTest, poll_invalid)
     Debug::setLogHandler(std::function<void(Debug::DebugMessage)>());
 }
 
-TEST_F(SocketImplTest, poll_detached_tasks)
-{
-    Mock::Homa::MockInMessage inMessage;
-    Mock::Homa::MockOutMessage outMessage;
-    Proto::RpcId rpcId(1, 1);
-    for (int i = 0; i < 2; ++i) {
-        ServerTaskImpl* task = createTask(rpcId, 0xDEADBEEF, inMessage);
-        task->response.reset(&outMessage);
-        socket->detachedTasks.push_back(task);
-    }
-
-    EXPECT_CALL(transport, poll());
-    EXPECT_CALL(transport, receive())
-        .WillOnce(Return(ByMove(Homa::unique_ptr<Homa::InMessage>())));
-    EXPECT_CALL(inMessage, dropped())
-        .WillOnce(Return(true))
-        .WillOnce(Return(false));
-    EXPECT_CALL(outMessage, getStatus)
-        .WillOnce(Return(Homa::OutMessage::Status::IN_PROGRESS));
-    EXPECT_CALL(inMessage, release());
-    EXPECT_CALL(outMessage, release());
-
-    EXPECT_EQ(2, socket->detachedTasks.size());
-
-    socket->poll();
-
-    EXPECT_EQ(1, socket->detachedTasks.size());
-
-    EXPECT_CALL(transport, poll);
-    EXPECT_CALL(transport, receive())
-        .WillOnce(Return(ByMove(Homa::unique_ptr<Homa::InMessage>())));
-    EXPECT_CALL(inMessage, dropped()).WillOnce(Return(true));
-    EXPECT_CALL(inMessage, release());
-    EXPECT_CALL(outMessage, release());
-
-    socket->poll();
-
-    EXPECT_EQ(0, socket->detachedTasks.size());
-}
-
 TEST_F(SocketImplTest, dropRpc)
 {
     Proto::RpcId rpcId = socket->allocRpcId();
@@ -294,17 +254,17 @@ TEST_F(SocketImplTest, dropRpc)
     EXPECT_EQ(0, socket->rpcs.count(rpcId));
 }
 
-TEST_F(SocketImplTest, remandTask)
+TEST_F(SocketImplTest, dropTask)
 {
     Mock::Homa::MockInMessage inMessage;
     Proto::RpcId rpcId(1, 1);
     ServerTaskImpl* task = createTask(rpcId, 0xDEADBEEF, inMessage);
 
-    EXPECT_EQ(0, socket->detachedTasks.size());
+    EXPECT_EQ(1, socket->taskPool.outstandingObjects);
 
-    socket->remandTask(task);
+    socket->dropTask(task);
 
-    EXPECT_EQ(1, socket->detachedTasks.size());
+    EXPECT_EQ(0, socket->taskPool.outstandingObjects);
 
     EXPECT_CALL(inMessage, release());
     delete task;
