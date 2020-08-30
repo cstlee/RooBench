@@ -196,67 +196,72 @@ def print_cpu_usage_stats(client_names, server_names, bench_stats, transport_sta
     print s + h2
     print s + h2_2
     print s + h2_
-    total_fg_time = 0.0
-    total_bg_time = 0.0
-    total_count = 0
+    total_fg_cpu = 0.0
+    total_bg_cpu = 0.0
+    total_iter_per_second = 0.0
 
-    def print_cpu_entry(host_name, count):
-        cps_t = transport_stats[host_name]['cycles_per_second']
-        cps_b = bench_stats[host_name]['cycles_per_second']
-        cps = cps_t
+    def print_cpu_entry(host_name, iter_per_second):
+        cps = transport_stats[host_name]['cycles_per_second']
         duration = transport_stats[host_name]['elapsed_time']
         cycles = transport_stats[host_name]['api_cycles'] + transport_stats[host_name]['active_cycles']
+        active_cycles_per_second = np.divide(cycles, duration);
+        active_cycles_per_iter = np.divide(active_cycles_per_second, iter_per_second)
         print host_name.rjust(10, ' ') + \
-            " %12d " % np.divide(cycles, count) + \
-            " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
-            " %12.3f " % np.divide(cycles, cps * duration) + \
+            " %12d " % active_cycles_per_iter + \
+            " %12.3f " % np.divide(1000000 * active_cycles_per_iter, cps) + \
+            " %12.3f " % np.divide(active_cycles_per_second, cps) + \
             " %12d " % (cycles)
         cycles = transport_stats[host_name]['api_cycles']
+        active_cycles_per_second = np.divide(cycles, duration);
+        active_cycles_per_iter = np.divide(active_cycles_per_second, iter_per_second)
+        fg_cpu = np.divide(active_cycles_per_second, cps)
         print "(fg)".rjust(10, ' ') + \
-            " %12d " % np.divide(cycles, count) + \
-            " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
-            " %12.3f " % np.divide(cycles, cps * duration) + \
+            " %12d " % active_cycles_per_iter + \
+            " %12.3f " % np.divide(1000000 * active_cycles_per_iter, cps) + \
+            " %12.3f " % np.divide(active_cycles_per_second, cps) + \
             " %12d " % (cycles)
         cycles = transport_stats[host_name]['active_cycles']
+        active_cycles_per_second = np.divide(cycles, duration);
+        active_cycles_per_iter = np.divide(active_cycles_per_second, iter_per_second)
+        bg_cpu = np.divide(active_cycles_per_second, cps)
         print "(bg)".rjust(10, ' ') + \
-            " %12d " % np.divide(cycles, count) + \
-            " %12.3f " % np.divide(1000000 * cycles, cps * count) + \
-            " %12.3f " % np.divide(cycles, cps * duration) + \
+            " %12d " % active_cycles_per_iter + \
+            " %12.3f " % np.divide(1000000 * active_cycles_per_iter, cps) + \
+            " %12.3f " % np.divide(active_cycles_per_second, cps) + \
             " %12d " % (cycles)
-        fg_time = transport_stats[host_name]['api_cycles'] /cps
-        bg_time = transport_stats[host_name]['active_cycles'] /cps
-        return (fg_time, bg_time)
+        return (fg_cpu, bg_cpu)
 
     for client_name in client_names:
-        count = bench_stats[client_name]['client_count']
-        total_count += count
-        fg_time, bg_time = print_cpu_entry(client_name, count)
-        total_fg_time += fg_time
-        total_bg_time += bg_time
+        count = float(bench_stats[client_name]['client_count']) 
+        duration = float(bench_stats[client_name]['elapsed_time'])
+        iter_per_second = (count / duration)
+        total_iter_per_second += iter_per_second
+        fg, bg = print_cpu_entry(client_name, iter_per_second)
+        total_fg_cpu += fg
+        total_bg_cpu += bg
     for server_name in server_names:
-        fg_time, bg_time = print_cpu_entry(server_name, total_count)
-        total_fg_time += fg_time
-        total_bg_time += bg_time
+        fg, bg = print_cpu_entry(server_name, total_iter_per_second)
+        total_fg_cpu += fg
+        total_bg_cpu += bg
 
     print s + h2_
-    duration = transport_stats[client_names[0]]['elapsed_time']
-    cpu_time = total_fg_time + total_bg_time
+    active_cpu = total_fg_cpu + total_bg_cpu
     print "Total".rjust(10, ' ') + \
         "      --      " + \
-        " %12.3f " % np.divide(1000000 * cpu_time, total_count) + \
-        " %12.3f " % np.divide(cpu_time, duration) + \
+        " %12.3f " % np.divide(1000000 * active_cpu, total_iter_per_second) + \
+        " %12.3f " % active_cpu + \
         "      --      "
-    cpu_time = total_fg_time
+    active_cpu = total_fg_cpu
     print "(fg)".rjust(10, ' ') + \
         "      --      " + \
-        " %12.3f " % np.divide(1000000 * cpu_time, total_count) + \
-        " %12.3f " % np.divide(cpu_time, duration) + \
+        " %12.3f " % np.divide(1000000 * active_cpu, total_iter_per_second) + \
+        " %12.3f " % active_cpu + \
         "      --      "
-    cpu_time = total_bg_time
+    active_cpu = total_bg_cpu
     print "(bg)".rjust(10, ' ') + \
         "      --      " + \
-        " %12.3f " % np.divide(1000000 * cpu_time, total_count) + \
-        " %12.3f " % np.divide(cpu_time, duration) + \
+        " %12.3f " % np.divide(1000000 * active_cpu, total_iter_per_second) + \
+        " %12.3f " % active_cpu + \
         "      --      "
 
 def print_task_stats(host_names, bench_stats):
