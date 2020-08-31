@@ -85,17 +85,23 @@ def get_bench_stats(data_dir, server_name):
         end_data = json.load(f)
     cps = end_data["cycles_per_second"]
 
-    latencies = end_data["client_stats"]["latencies"]
-    latencies.sort()
-    latency_stats = {}
-    latency_stats["raw"] = end_data["client_stats"]["latencies"] 
-    latency_stats["count"] = len(latencies) 
-    latency_stats["00"] = latencies[0]
-    latency_stats["25"] = latencies[int(0.25 * len(latencies))]
-    latency_stats["50"] = latencies[int(0.5 * len(latencies))]
-    latency_stats["75"] = latencies[int(0.75 * len(latencies))]
-    latency_stats["90"] = latencies[int(0.9 * len(latencies))]
-    latency_stats["99"] = latencies[int(0.99 * len(latencies))]
+    latencies = []
+    if end_data["client_stats"]["count"] > len(end_data["client_stats"]["latencies"]):
+        end_count = end_data["client_stats"]["count"]
+        start_count = start_data["client_stats"]["count"]
+        max_count = len(end_data["client_stats"]["latencies"])
+        if end_count - start_count >= max_count:
+            latencies = end_data["client_stats"]["latencies"]
+        else:
+            end_index = end_count % max_count
+            start_index = start_count % max_count 
+            if start_index <= end_index:
+                latencies = end_data["client_stats"]["latencies"][start_index:end_index]
+            else:
+                latencies = end_data["client_stats"]["latencies"][start_index:] + end_data["client_stats"]["latencies"][:end_index]
+    else:
+        warmup_count = len(start_data["client_stats"]["latencies"])
+        latencies = end_data["client_stats"]["latencies"][warmup_count:]
 
     start_task_stats = {task['id']: task['count'] for task in start_data['task_stats']}
     end_task_stats = {task['id']: task['count'] for task in end_data['task_stats']}
@@ -106,24 +112,31 @@ def get_bench_stats(data_dir, server_name):
     data["elapsed_time"] = stat_diff("timestamp", start_data, end_data) / cps
     data["cycles_per_second"] = cps
     data["active_cycles"] = 0
-    data["client_latency"] = latency_stats
+    data["client_latencies"] = latencies
     data["client_count"] = end_data["client_stats"]["count"] - start_data["client_stats"]["count"]
     data["task_stats"] = task_stats
 
     return data
 
-def print_latency(bench_stats):
-    latency_stats = bench_stats["client_latency"]
-    latency_min = latency_stats["00"] / 1000.0
-    latency_25 = latency_stats["25"] / 1000.0
-    latency_med = latency_stats["50"] / 1000.0
-    latency_75 = latency_stats["75"] / 1000.0
-    latency_90 = latency_stats["90"] / 1000.0
-    latency_99 = latency_stats["99"] / 1000.0
-    print "Client Latency (%9d samples)" % bench_stats["client_latency"]["count"]
+def print_latency(bench_stats, client_names):
+    latencies = []
+    for name in client_names:
+        latencies += bench_stats[name]["client_latencies"]
+    latencies.sort()
+    count = len(latencies)
+    print "Client Latency (%9d samples)" % count
     print "------------------------------------------------------------"
-    print " Med (us)  Min (us)  25% (us)  75% (us)  90% (us)  99% (us) "
-    print "%8.3f  %8.3f  %8.3f  %8.3f  %8.3f  %8.3f" % (latency_med, latency_min, latency_25, latency_75, latency_90, latency_99)
+    if (count < 1):
+        print "No data"
+    else:
+        latency_min = latencies[0] / 1000.0
+        latency_25 = latencies[int(0.25 * len(latencies))] / 1000.0
+        latency_med = latencies[int(0.5 * len(latencies))] / 1000.0
+        latency_75 = latencies[int(0.75 * len(latencies))] / 1000.0
+        latency_90 = latencies[int(0.9 * len(latencies))] / 1000.0
+        latency_99 = latencies[int(0.99 * len(latencies))] / 1000.0
+        print " Med (us)  Min (us)  25% (us)  75% (us)  90% (us)  99% (us) "
+        print "%8.3f  %8.3f  %8.3f  %8.3f  %8.3f  %8.3f" % (latency_med, latency_min, latency_25, latency_75, latency_90, latency_99)
 
 def print_net_usage(client_names, server_names, bench_stats, transport_stats):
     print "Network Usage Statistics:"
@@ -392,7 +405,7 @@ def main(args):
         print_all = True
 
     if (print_all or args['--latency']):
-        print_latency(bench_stats[client_names[0]])
+        print_latency(bench_stats, client_names)
         print ""
     
     if (print_all or args['--cpu']):
