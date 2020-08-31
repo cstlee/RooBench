@@ -38,12 +38,20 @@ def read_config(config):
     src_dir = lines[2].strip('\n')
     return (hosts, bin_dir, src_dir)
 
+def wait(tasks):
+    for p in tasks:
+        p.wait()
+    tasks = []
+
 def remote_call(host, cmd):
-    os.system('ssh {host} "{cmd}"'.format(host=host, cmd=cmd))
+    # os.system('ssh {host} "{cmd}"'.format(host=host, cmd=cmd))
+    p = subprocess.Popen('ssh {host} "{cmd}"'.format(host=host, cmd=cmd), shell=True)
+    return p
 
 def setup_host(remote, log_dir_name):
     log_dir = "~/logs/{}".format(log_dir_name)
-    remote_call(remote, 'mkdir -p {log_dir}; ln -sFfn {log_dir} ~/logs/latest'.format(log_dir=log_dir))
+    p = remote_call(remote, 'mkdir -p {log_dir}; ln -sFfn {log_dir} ~/logs/latest'.format(log_dir=log_dir))
+    return p
 
 def coordinator_setup(log_dir, date_time, server_config, bench_config):
     test_dir = "%s/%s" %(log_dir, date_time)
@@ -62,78 +70,104 @@ def main(args):
                       date_time,
                       args['<server_config>'],
                       args['<bench_config>'])
-    
+
+    tasks = []
+
+    print "Setup Hosts..."
     ##### Setup hosts
     SERVER_ID=1
     for host in hosts:
-        print "Setup Host %d on %s" %(SERVER_ID, host)
-        setup_host(host, date_time)
+        p = setup_host(host, date_time)
+        tasks.append(p)
         SERVER_ID += 1
+    wait(tasks)
+    print "          ... Done."
 
     ##### Start Servers
     SERVER_ID=1
+    print "Start Servers..."
     for host in hosts:
-        print "Start Server %d on %s" %(SERVER_ID, host)
         if SERVER_ID <= client_count:
             server_name = "client-{}".format(SERVER_ID)
         else:
             server_name = "server-{}".format(SERVER_ID - client_count)
         cmd = 'sudo nohup {src_dir}/scripts/roobench.py server launch {server_name} {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, server_name=server_name, remote_config_dir=remote_config_dir)
-        remote_call(host, cmd)
+        p = remote_call(host, cmd)
+        tasks.append(p)
         SERVER_ID += 1
+    wait(tasks)
+    print "          ... Done."
     
-    time.sleep(0.5)
+    time.sleep(1)
 
     ##### Run Client
     
+    print "Start Client Workload..."
     for host in hosts[:client_count]:
-        print "Start Client Workload on {}".format(host)
         cmd = 'sudo nohup {src_dir}/scripts/roobench.py server start {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, remote_config_dir=remote_config_dir)
-        remote_call(host, cmd)
+        p = remote_call(host, cmd)
+        tasks.append(p)
+    wait(tasks)
+    print "          ... Done."
     
-    time.sleep(1)
+    time.sleep(2)
     
     ##### Dump stats
     SERVER_ID=1
+    print "Dump stats [begining]..."
     for host in hosts:
-        print "Dump Server %d stats on %s" %(SERVER_ID, host)
         cmd = 'sudo nohup {src_dir}/scripts/roobench.py server stats {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, remote_config_dir=remote_config_dir)
-        remote_call(host, cmd)
+        p = remote_call(host, cmd)
+        tasks.append(p)
         SERVER_ID += 1
+    wait(tasks)
+    print "          ... Done."
     
-    time.sleep(30)
+    time.sleep(8)
 
     ##### Dump stats
     SERVER_ID=1
+    print "Dump stats [end]..."
     for host in hosts:
-        print "Dump Server %d stats on %s" %(SERVER_ID, host)
         cmd = 'sudo nohup {src_dir}/scripts/roobench.py server stats {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, remote_config_dir=remote_config_dir)
-        remote_call(host, cmd)
+        p = remote_call(host, cmd)
+        tasks.append(p)
         SERVER_ID += 1
+    wait(tasks)
+    print "          ... Done."
     
     time.sleep(1)
     
     ##### Stop Servers
     SERVER_ID=1
+    print "Stop Hosts..."
     for host in hosts:
-        print "Stop Server %d on %s" %(SERVER_ID, host)
         cmd = 'sudo {src_dir}/scripts/roobench.py server stop {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, remote_config_dir=remote_config_dir)
-        remote_call(host, cmd)
+        p = remote_call(host, cmd)
+        tasks.append(p)
         SERVER_ID += 1
+    wait(tasks)
+    print "          ... Done."
     
     ##### Kill Servers
     SERVER_ID=1
+    print "Kill Hosts..."
     for host in hosts:
-        print "Kill Server %d on %s" %(SERVER_ID, host)
-        remote_call(host, "sudo pkill -f server")
+        p = remote_call(host, "sudo pkill -f server")
+        tasks.append(p)
         SERVER_ID += 1
+    wait(tasks)
+    print "          ... Done."
 
     ##### Collect Logs
     SERVER_ID=1
+    print "Collect logs..."
     for host in hosts:
-        print "Copying Host %d logs from %s" %(SERVER_ID, host)
-        os.system('scp "{host}:~/logs/{date_time}/*" "{log_dir}/{date_time}"'.format(host=host, date_time=date_time, log_dir=args['<log_dir>']))
+        p = subprocess.Popen('scp "{host}:~/logs/{date_time}/*" "{log_dir}/{date_time}"'.format(host=host, date_time=date_time, log_dir=args['<log_dir>']), shell=True)
+        tasks.append(p)
         SERVER_ID=1
+    wait(tasks)
+    print "          ... Done."
 
 
 if __name__ == '__main__':
