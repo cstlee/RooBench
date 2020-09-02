@@ -16,10 +16,11 @@
 
 """
 Usage:
-    roobench.py run <config> <server_config> <bench_config> <log_dir>
+    roobench.py run <config> <server_config> <bench_config> <log_dir> [--out=<outdir>]
 
 Options:
     -h, --help          Show this screen.
+    -o, --out=<outdir>  Name of the output directory; defaults to a date string.
 """
 
 import json
@@ -53,11 +54,12 @@ def setup_host(remote, log_dir_name):
     p = remote_call(remote, 'mkdir -p {log_dir}; ln -sFfn {log_dir} ~/logs/latest'.format(log_dir=log_dir))
     return p
 
-def coordinator_setup(log_dir, date_time, server_config, bench_config):
-    test_dir = "%s/%s" %(log_dir, date_time)
+def coordinator_setup(log_dir, out_name, server_config, bench_config):
+    test_dir = "%s/%s/" %(log_dir.rstrip('/'), out_name.rstrip('/'))
     os.makedirs(test_dir)
     shutil.copyfile(server_config, test_dir + '/ServerConfig.json')
     shutil.copyfile(bench_config, test_dir + '/BenchConfig.json')
+    return test_dir
 
 def main(args):
     hosts, bin_dir, src_dir = read_config(args['<config>'])
@@ -65,9 +67,13 @@ def main(args):
     date_time = datetime.now().strftime('%F-%H-%M-%S')
     with open(os.path.expanduser(args["<bench_config>"])) as f:
         bench_config = json.load(f)
-    client_count = bench_config['client_count'] 
-    coordinator_setup(args['<log_dir>'],
-                      date_time,
+    client_count = bench_config['client_count']
+    if (args['--out'] is not None):
+        out_name = args['--out']
+    else:
+        out_name = date_time
+    out_dir = coordinator_setup(args['<log_dir>'],
+                      out_name,
                       args['<server_config>'],
                       args['<bench_config>'])
     hosts = hosts[:bench_config['node_count']]
@@ -164,7 +170,7 @@ def main(args):
     SERVER_ID=1
     print "Collect logs..."
     for host in hosts:
-        p = subprocess.Popen('scp "{host}:~/logs/{date_time}/*" "{log_dir}/{date_time}"'.format(host=host, date_time=date_time, log_dir=args['<log_dir>']), shell=True)
+        p = subprocess.Popen('scp "{host}:~/logs/{date_time}/*" "{out_dir}"'.format(host=host, date_time=date_time, out_dir=out_dir), shell=True)
         tasks.append(p)
         SERVER_ID=1
     wait(tasks)
