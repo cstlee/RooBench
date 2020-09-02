@@ -24,6 +24,7 @@
 #include <atomic>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 #include "Benchmark.h"
 
@@ -86,6 +87,27 @@ class RpcBenchmark : public Benchmark {
     struct TaskStats {
         std::atomic<int> count;
     };
+    struct Op {
+        Op()
+            : started(false)
+            , rpcs()
+            , nextCheckIndex(0)
+            , nextPhase()
+            , start_cycles(0)
+            , stop_cycles(0)
+            , failed(false)
+        {}
+
+        bool phaseEnded();
+
+        bool started;
+        std::vector<SimpleRpc::unique_ptr<SimpleRpc::Rpc>> rpcs;
+        std::size_t nextCheckIndex;
+        std::vector<BenchConfig::Client::Phase>::const_iterator nextPhase;
+        uint64_t start_cycles;
+        uint64_t stop_cycles;
+        bool failed;
+    };
 
     static std::unordered_map<int, const std::unique_ptr<TaskStats>>
     create_task_stats_map(const BenchConfig::TaskMap& task_map);
@@ -100,6 +122,9 @@ class RpcBenchmark : public Benchmark {
     const std::unique_ptr<Homa::Transport> transport;
     const std::unique_ptr<SimpleRpc::Socket> socket;
     const std::vector<Homa::Driver::Address> peer_list;
+    const bool unified;
+    const uint64_t cyclesPerOp;
+    std::atomic<uint64_t> nextOpTimeout;
     std::atomic<bool> run;
     std::atomic<bool> run_client;
     std::atomic_flag client_running;

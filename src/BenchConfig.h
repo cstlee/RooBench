@@ -65,11 +65,17 @@ struct BenchConfig {
     Client client;
     TaskMap tasks;
     ServerList serverList;
+    int client_count;
+    bool unified;
+    double load;
 
     explicit BenchConfig(const nlohmann::json& config)
         : serverList()
         , client()
         , tasks()
+        , client_count()
+        , load()
+        , unified(false)
     {
         // Load workload
         auto& workload_config = config.at("workload");
@@ -120,6 +126,11 @@ struct BenchConfig {
             serverList.insert({server.at("id").get<int>(),
                                {server.at("address").get<std::string>()}});
         }
+
+        // Load other configurations
+        client_count = config.at("client_count");
+        load = config.at("load");
+        unified = config.at("unified");
     }
 
     void dumps() const
@@ -159,6 +170,9 @@ struct BenchConfig {
             std::cout << elem.first << " : " << elem.second.address
                       << std::endl;
         }
+        std::cout << "client_count: " << client_count << std::endl;
+        std::cout << "load: " << load << std::endl;
+        std::cout << "unified: " << unified << std::endl;
     }
 };
 

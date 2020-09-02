@@ -23,6 +23,7 @@
 
 #include <fstream>
 #include <functional>
+#include <list>
 #include <nlohmann/json.hpp>
 #include <random>
 
@@ -80,6 +81,10 @@ DpcBenchmark::DpcBenchmark(nlohmann::json bench_config, std::string server_name,
                             driver->getLocalAddress()))))
     , socket(Roo::Socket::create(transport.get()))
     , peer_list(create_peer_list(config.serverList, driver.get()))
+    , unified(config.unified)
+    , cyclesPerOp(PerfUtils::Cycles::fromSeconds(
+          static_cast<double>(config.client_count) / config.load))
+    , nextOpTimeout(0)
     , run(true)
     , run_client(false)
     , client_running()
@@ -104,9 +109,11 @@ void
 DpcBenchmark::run_benchmark()
 {
     while (run) {
+        socket->poll();
         if (run_client) {
             client_poll();
-        } else {
+        }
+        if (!run_client || unified) {
             server_poll();
         }
     }
@@ -246,7 +253,6 @@ DpcBenchmark::create_task_stats_map(const BenchConfig::TaskMap& task_map)
 void
 DpcBenchmark::server_poll()
 {
-    socket->poll();
     for (Roo::unique_ptr<Roo::ServerTask> task = socket->receive(); task;
          task = socket->receive()) {
         dispatch(std::move(task));
@@ -259,53 +265,77 @@ DpcBenchmark::server_poll()
 void
 DpcBenchmark::client_poll()
 {
+    static thread_local std::random_device rd;
+    static thread_local std::mt19937 gen(rd());
+    static thread_local std::poisson_distribution<uint64_t> dis(cyclesPerOp);
+    static thread_local std::list<Op> ops;
+
     if (client_running.test_and_set()) {
         return;
+    }
+
+    // Check if it is time for another execution
+    uint64_t timeout = nextOpTimeout.load();
+    uint64_t now = PerfUtils::Cycles::rdtsc();
+    uint64_t const nextTimeout = now + dis(gen);
+    if (timeout <= now &&
+        nextOpTimeout.compare_exchange_strong(timeout, nextTimeout)) {
+        ops.emplace_back();
     }
 
     const int buf_size = 1000000;
     char buf[buf_size];
 
-    uint64_t start_cycles = PerfUtils::Cycles::rdtsc();
-    Roo::unique_ptr<Roo::RooPC> rpc = socket->allocRooPC();
-    for (const BenchConfig::Client::Phase& phase : config.client.phases) {
-        for (const BenchConfig::Request& request_config : phase.requests) {
-            for (int i = 0; i < request_config.count; ++i) {
-                WireFormat::Benchmark::Request* request =
-                    reinterpret_cast<WireFormat::Benchmark::Request*>(buf);
-                request->common.opcode = WireFormat::Benchmark::opcode;
-                request->taskType = request_config.taskId;
-                Homa::Driver::Address dest = selectServer();
-                assert(request_config.size >=
-                       sizeof(WireFormat::Benchmark::Request));
-                assert(request_config.size <= sizeof(buf));
-                rpc->send(dest, buf, request_config.size);
-                socket->poll();
-            }
+    auto it = ops.begin();
+    while (it != ops.end()) {
+        Op& op = *it;
+        if (!op.rpc) {
+            op.start_cycles = PerfUtils::Cycles::rdtsc();
+            op.rpc = socket->allocRooPC();
+            op.nextPhase = config.client.phases.cbegin();
         }
-        while (rpc->checkStatus() == Roo::RooPC::Status::IN_PROGRESS) {
-            socket->poll();
-            if (!run_client) {
-                return;
+        while (op.nextPhase != config.client.phases.cend()) {
+            if (op.rpc->checkStatus() == Roo::RooPC::Status::IN_PROGRESS) {
+                break;
             }
+            const BenchConfig::Client::Phase& phase = *op.nextPhase;
+            for (const BenchConfig::Request& request_config : phase.requests) {
+                for (int i = 0; i < request_config.count; ++i) {
+                    WireFormat::Benchmark::Request* request =
+                        reinterpret_cast<WireFormat::Benchmark::Request*>(buf);
+                    request->common.opcode = WireFormat::Benchmark::opcode;
+                    request->taskType = request_config.taskId;
+                    Homa::Driver::Address dest = selectServer();
+                    assert(request_config.size >=
+                           sizeof(WireFormat::Benchmark::Request));
+                    assert(request_config.size <= sizeof(buf));
+                    op.rpc->send(dest, buf, request_config.size);
+                }
+            }
+            ++op.nextPhase;
         }
-        rpc->wait();
+        if (op.nextPhase == config.client.phases.cend() &&
+            op.rpc->checkStatus() != Roo::RooPC::Status::IN_PROGRESS) {
+            op.stop_cycles = PerfUtils::Cycles::rdtsc();
+            Roo::RooPC::Status status = op.rpc->checkStatus();
+            op.rpc.reset();
+            if (status == Roo::RooPC::Status::COMPLETED) {
+                // Update stats
+                std::lock_guard<std::mutex> lock(stats_mutex);
+                client_stats.samples.at(client_stats.sample_count &
+                                        SAMPLE_INDEX_MASK) =
+                    op.stop_cycles - op.start_cycles;
+                client_stats.sample_count++;
+                client_stats.count++;
+            } else {
+                client_stats.failures++;
+            }
+            it = ops.erase(it);
+        } else {
+            ++it;
+        }
     }
-    uint64_t stop_cycles = PerfUtils::Cycles::rdtsc();
-    Roo::RooPC::Status status = rpc->checkStatus();
-    rpc.reset();
     client_running.clear();
-
-    if (status == Roo::RooPC::Status::COMPLETED) {
-        // Update stats
-        std::lock_guard<std::mutex> lock(stats_mutex);
-        client_stats.samples.at(client_stats.sample_count & SAMPLE_INDEX_MASK) =
-            stop_cycles - start_cycles;
-        client_stats.sample_count++;
-        client_stats.count++;
-    } else {
-        client_stats.failures++;
-    }
 }
 
 Homa::Driver::Address

@@ -87,6 +87,19 @@ class DpcBenchmark : public Benchmark {
     struct TaskStats {
         std::atomic<int> count;
     };
+    struct Op {
+        Op()
+            : rpc()
+            , nextPhase()
+            , start_cycles(0)
+            , stop_cycles(0)
+        {}
+
+        Roo::unique_ptr<Roo::RooPC> rpc;
+        std::vector<BenchConfig::Client::Phase>::const_iterator nextPhase;
+        uint64_t start_cycles;
+        uint64_t stop_cycles;
+    };
 
     static std::unordered_map<int, const std::unique_ptr<TaskStats>>
     create_task_stats_map(const BenchConfig::TaskMap& task_map);
@@ -101,6 +114,9 @@ class DpcBenchmark : public Benchmark {
     const std::unique_ptr<Homa::Transport> transport;
     const std::unique_ptr<Roo::Socket> socket;
     const std::vector<Homa::Driver::Address> peer_list;
+    const bool unified;
+    const uint64_t cyclesPerOp;
+    std::atomic<uint64_t> nextOpTimeout;
     std::atomic<bool> run;
     std::atomic<bool> run_client;
     std::atomic_flag client_running;

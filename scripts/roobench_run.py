@@ -70,6 +70,7 @@ def main(args):
                       date_time,
                       args['<server_config>'],
                       args['<bench_config>'])
+    hosts = hosts[:bench_config['node_count']]
 
     tasks = []
 

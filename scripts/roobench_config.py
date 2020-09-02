@@ -16,12 +16,16 @@
 
 """
 Usage:
-    roobench.py config bench <server_list> <workload> [<client_count>] [--out=<name>]
+    roobench.py config bench <server_list> <workload> [--clients=<n> --load=<ops> --nodes=<n> --out=<name> --unified]
     roobench.py config server-list <server_config> <hostname>... [--out=<name>]
 
 Options:
     -h, --help          Show this screen.
+    -c, --clients=<n>   Number of clients to run. [default: 1]
+    -l, --load=<ops>    The number operations per second. [default: 1000.0]
+    -n, --nodes=<n>     Number of host nodes to run (0 means all). [default: 0]
     -o, --out=<name>    Output to the given file name.
+    -u, --unified       Node should run both client and server.
 """
 
 import json
@@ -34,12 +38,26 @@ def main(args):
             server_list = json.load(f)
         with open(args["<workload>"]) as f:
             workload = json.load(f)
-        client_count = 1
-        if args['<client_count>'] is not None:
-            client_count = int(args['<client_count>'])
         config = {}
-        config["client_count"] = client_count
-        config["server_list"] = {u'servers': server_list['servers'][client_count:]}
+        node_count = len(server_list['servers'])
+        if args['--nodes'] > 0:
+            node_count = int(args['--nodes'])
+        if args['--unified']:
+            config["client_count"] = node_count
+            config["server_list"] = {u'servers': server_list['servers'][:node_count]}
+            if node_count < 2:
+                print "Error: Need at least 2 server nodes (clients: {}, servers: {})".format(node_count, node_count)
+                return
+        else:
+            client_count = int(args['--clients'])
+            if node_count - client_count < 2:
+                print "Error: Need at least 2 server nodes (clients: {}, servers: {})".format(client_count, node_count - client_count)
+                return
+            config["client_count"] = client_count
+            config["server_list"] = {u'servers': server_list['servers'][client_count:node_count]}
+        config["load"] = float(args['--load'])
+        config["node_count"] = node_count
+        config["unified"] = bool(args['--unified'])
         config["workload"] = workload
         if args["--out"]:
             with open(args["--out"], 'w') as f:
