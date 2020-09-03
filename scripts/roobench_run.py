@@ -16,12 +16,13 @@
 
 """
 Usage:
-    roobench.py run <config> <server_config> <bench_config> <log_dir> [--out=<outdir> --pause]
+    roobench.py run <config> <server_config> <bench_config> <log_dir> [--out=<outdir> --pause --verbose]
 
 Options:
     -h, --help          Show this screen.
     -o, --out=<outdir>  Name of the output directory; defaults to a date string.
     -p, --pause         Wait for user before starting clients.
+    -v, --verbose       Print out the commands before they are run.
 """
 
 import json
@@ -100,6 +101,8 @@ def main(args):
         else:
             server_name = "server-{}".format(SERVER_ID - client_count)
         cmd = 'sudo nohup {src_dir}/scripts/roobench.py server launch {server_name} {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, server_name=server_name, remote_config_dir=remote_config_dir)
+        if args['--verbose']:
+            print cmd
         p = remote_call(host, cmd)
         tasks.append(p)
         SERVER_ID += 1
@@ -116,6 +119,8 @@ def main(args):
     print "Start Client Workload..."
     for host in hosts[:client_count]:
         cmd = 'sudo nohup {src_dir}/scripts/roobench.py server start {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, remote_config_dir=remote_config_dir)
+        if args['--verbose']:
+            print cmd
         p = remote_call(host, cmd)
         tasks.append(p)
     wait(tasks)
@@ -128,6 +133,8 @@ def main(args):
     print "Dump stats [begining]..."
     for host in hosts:
         cmd = 'sudo nohup {src_dir}/scripts/roobench.py server stats {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, remote_config_dir=remote_config_dir)
+        if args['--verbose']:
+            print cmd
         p = remote_call(host, cmd)
         tasks.append(p)
         SERVER_ID += 1
@@ -141,6 +148,8 @@ def main(args):
     print "Dump stats [end]..."
     for host in hosts:
         cmd = 'sudo nohup {src_dir}/scripts/roobench.py server stats {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, remote_config_dir=remote_config_dir)
+        if args['--verbose']:
+            print cmd
         p = remote_call(host, cmd)
         tasks.append(p)
         SERVER_ID += 1
@@ -154,6 +163,8 @@ def main(args):
     print "Stop Hosts..."
     for host in hosts:
         cmd = 'sudo {src_dir}/scripts/roobench.py server stop {remote_config_dir}/ServerConfig.json'.format(src_dir=src_dir, remote_config_dir=remote_config_dir)
+        if args['--verbose']:
+            print cmd
         p = remote_call(host, cmd)
         tasks.append(p)
         SERVER_ID += 1
@@ -165,6 +176,8 @@ def main(args):
     print "Kill Hosts..."
     for host in hosts:
         p = remote_call(host, "sudo pkill -f server")
+        if args['--verbose']:
+            print cmd
         tasks.append(p)
         SERVER_ID += 1
     wait(tasks)
