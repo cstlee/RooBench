@@ -24,6 +24,7 @@ Options:
     -n, --network           Output Network Usage Stats
     -c, --cpu               Output CPU Usage Stats
     -p, --packet            Output Packet Stats
+    -s, --summary           Output a stats summary
     -t, --task              Output Task Stats
 """
 
@@ -114,15 +115,48 @@ def get_bench_stats(data_dir, server_name):
     data["active_cycles"] = 0
     data["client_latencies"] = latencies
     data["client_count"] = end_data["client_stats"]["count"] - start_data["client_stats"]["count"]
+    data["client_failures"] = end_data["client_stats"]["failures"] - start_data["client_stats"]["failures"]
     data["task_stats"] = task_stats
 
     return data
 
-def print_latency(bench_stats, client_names):
+def get_latencies(client_names, bench_stats):
     latencies = []
     for name in client_names:
         latencies += bench_stats[name]["client_latencies"]
     latencies.sort()
+    return latencies
+
+def print_summary(client_names, server_names, bench_stats, transport_stats):
+    client_count = 0
+    client_failures = 0
+    throughput = 0.0
+    cpu_util = 0.0
+    for name in client_names + server_names:
+        client_count += bench_stats[name]["client_count"]
+        client_failures += bench_stats[name]["client_failures"]
+        throughput += (bench_stats[name]["client_count"] / bench_stats[name]["elapsed_time"]) / 1000.0
+        _cps = transport_stats[name]["cycles_per_second"]
+        _fg_cycles = transport_stats[name]["api_cycles"]
+        _bg_cycles = transport_stats[name]["active_cycles"]
+        _duration = transport_stats[name]["elapsed_time"]
+        cpu_util += (_fg_cycles + _bg_cycles) / (_duration * _cps)
+    latency = 0
+    latencies = get_latencies(client_names, bench_stats)
+    if len(latencies) > 0:
+        latency = latencies[int(0.5 * len(latencies))] / 1000.0
+
+    print "Summary Statistics"
+    print "------------------"
+    print "Num Completed: %8d" % client_count
+    print "   Num Failed: %8d" % client_failures
+    print "Latency [med]: %8.3f us" % latency
+    print "   Throughput: %8.3f kops" % throughput
+    print "     CPU Util: %8.3f cores" % cpu_util
+    pass
+
+def print_latency(bench_stats, client_names):
+    latencies = get_latencies(client_names, bench_stats)
     count = len(latencies)
     print "Client Latency (%9d samples)" % count
     print "------------------------------------------------------------"
@@ -396,13 +430,17 @@ def main(args):
         bench_stats[host_name] = get_bench_stats(args['<data_dir>'], host_name)
 
     flags_set = 0
-    for flag in ('--cpu', '--latency', '--network', '--packet', '--task'):
+    for flag in ('--cpu', '--latency', '--network', '--packet', '--task', '--summary'):
         if args[flag]:
             flags_set += 1
     if flags_set > 0:
         print_all = False
     else:
         print_all = True
+
+    if (print_all or args['--summary']):
+        print_summary(client_names, server_names, bench_stats, transport_stats)
+        print ""
 
     if (print_all or args['--latency']):
         print_latency(bench_stats, client_names)
