@@ -185,8 +185,9 @@ RpcBenchmark::dump_stats()
         nlohmann::json client_stats_json;
         client_stats_json["count"] = client_stats.count.load();
         client_stats_json["failures"] = client_stats.failures.load();
-        uint64_t const sample_count = std::min(
-            static_cast<uint64_t>(client_stats_json["count"]), MAX_SAMPLES);
+        uint64_t const sample_count =
+            std::min(static_cast<uint64_t>(client_stats_json["count"]),
+                     client_stats.samples.max_size());
         std::vector<uint> latencies;
         for (uint64_t i = 0; i < sample_count; ++i) {
             latencies.push_back(
