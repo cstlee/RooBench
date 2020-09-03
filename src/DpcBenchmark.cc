@@ -222,6 +222,7 @@ DpcBenchmark::dump_stats()
 void
 DpcBenchmark::start_client()
 {
+    nextOpTimeout = PerfUtils::Cycles::rdtsc();
     run_client = true;
 }
 
@@ -277,10 +278,8 @@ DpcBenchmark::client_poll()
 
     // Check if it is time for another execution
     uint64_t timeout = nextOpTimeout.load();
-    uint64_t now = PerfUtils::Cycles::rdtsc();
-    uint64_t const nextTimeout = now + dis(gen);
-    if (timeout <= now &&
-        nextOpTimeout.compare_exchange_strong(timeout, nextTimeout)) {
+    if (timeout <= PerfUtils::Cycles::rdtsc() &&
+        nextOpTimeout.compare_exchange_strong(timeout, timeout + dis(gen))) {
         ops.emplace_back();
     }
 
