@@ -16,11 +16,12 @@
 
 """
 Usage:
-    roobench.py run <config> <server_config> <bench_config> <log_dir> [--out=<outdir>]
+    roobench.py run <config> <server_config> <bench_config> <log_dir> [--out=<outdir> --pause]
 
 Options:
     -h, --help          Show this screen.
     -o, --out=<outdir>  Name of the output directory; defaults to a date string.
+    -p, --pause         Wait for user before starting clients.
 """
 
 import json
@@ -106,6 +107,9 @@ def main(args):
     print "          ... Done."
     
     time.sleep(1)
+    
+    if args['--pause']:
+        raw_input("Press Enter to continue...")
 
     ##### Run Client
     
