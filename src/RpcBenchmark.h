@@ -123,6 +123,7 @@ class RpcBenchmark : public Benchmark {
     const std::unique_ptr<SimpleRpc::Socket> socket;
     const std::vector<Homa::Driver::Address> peer_list;
     const bool unified;
+    const std::size_t queueDepth;
     const uint64_t cyclesPerOp;
     std::atomic<uint64_t> nextOpTimeout;
     std::atomic<bool> run;

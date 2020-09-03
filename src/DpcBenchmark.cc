@@ -82,6 +82,7 @@ DpcBenchmark::DpcBenchmark(nlohmann::json bench_config, std::string server_name,
     , socket(Roo::Socket::create(transport.get()))
     , peer_list(create_peer_list(config.serverList, driver.get()))
     , unified(config.unified)
+    , queueDepth(std::lround((config.load / 1000) / config.client_count) + 2)
     , cyclesPerOp(PerfUtils::Cycles::fromSeconds(
           static_cast<double>(config.client_count) / config.load))
     , nextOpTimeout(0)
@@ -280,7 +281,9 @@ DpcBenchmark::client_poll()
     uint64_t timeout = nextOpTimeout.load();
     if (timeout <= PerfUtils::Cycles::rdtsc() &&
         nextOpTimeout.compare_exchange_strong(timeout, timeout + dis(gen))) {
-        ops.emplace_back();
+        if (ops.size() < queueDepth) {
+            ops.emplace_back();
+        }
     }
 
     const int buf_size = 1000000;
