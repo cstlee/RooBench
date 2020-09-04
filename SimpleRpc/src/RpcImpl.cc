@@ -55,7 +55,7 @@ RpcImpl::send(Homa::Driver::Address destination, const void* request,
     message->append(&outboundHeader, sizeof(outboundHeader));
     message->append(request, length);
     Perf::counters.tx_message_bytes.add(sizeof(Proto::RequestHeader) + length);
-    message->send(destination);
+    message->send(destination, Homa::OutMessage::Options::NO_RETRY);
     this->request = std::move(message);
     Perf::counters.client_api_cycles.add(timer.split());
 }

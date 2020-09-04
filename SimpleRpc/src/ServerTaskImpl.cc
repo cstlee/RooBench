@@ -71,7 +71,7 @@ ServerTaskImpl::reply(const void* response, size_t length)
     message->append(&header, sizeof(header));
     message->append(response, length);
     Perf::counters.tx_message_bytes.add(sizeof(Proto::ResponseHeader) + length);
-    message->send(replyAddress);
+    message->send(replyAddress, Homa::OutMessage::Options::NO_RETRY);
     this->response = std::move(message);
     Perf::counters.server_api_cycles.add(timer.split());
 }
