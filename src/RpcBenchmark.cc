@@ -189,6 +189,7 @@ RpcBenchmark::dump_stats()
         nlohmann::json client_stats_json;
         client_stats_json["count"] = client_stats.count.load();
         client_stats_json["failures"] = client_stats.failures.load();
+        client_stats_json["drops"] = client_stats.drops.load();
         uint64_t const sample_count =
             std::min(static_cast<uint64_t>(client_stats_json["count"]),
                      client_stats.samples.max_size());
@@ -321,6 +322,8 @@ RpcBenchmark::client_poll()
         nextOpTimeout.compare_exchange_strong(timeout, timeout + dis(gen))) {
         if (ops.size() < queueDepth) {
             ops.emplace_back();
+        } else {
+            client_stats.drops++;
         }
     }
 

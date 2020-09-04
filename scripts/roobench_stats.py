@@ -116,6 +116,7 @@ def get_bench_stats(data_dir, server_name):
     data["client_latencies"] = latencies
     data["client_count"] = end_data["client_stats"]["count"] - start_data["client_stats"]["count"]
     data["client_failures"] = end_data["client_stats"]["failures"] - start_data["client_stats"]["failures"]
+    data["client_drops"] = end_data["client_stats"]["drops"] - start_data["client_stats"]["drops"]
     data["task_stats"] = task_stats
 
     return data
@@ -130,6 +131,7 @@ def get_latencies(client_names, bench_stats):
 def print_summary(client_names, server_names, bench_stats, transport_stats):
     client_count = 0
     client_failures = 0
+    client_drops = 0
     throughput = 0.0
     cpu_util_bench = 0.0
     cpu_util_fg = 0.0
@@ -137,6 +139,7 @@ def print_summary(client_names, server_names, bench_stats, transport_stats):
     for name in client_names + server_names:
         client_count += bench_stats[name]["client_count"]
         client_failures += bench_stats[name]["client_failures"]
+        client_drops += bench_stats[name]["client_drops"]
         throughput += (bench_stats[name]["client_count"] / bench_stats[name]["elapsed_time"]) / 1000.0
         _cps = bench_stats[name]["cycles_per_second"]
         _duration = bench_stats[name]["elapsed_time"]
@@ -154,6 +157,7 @@ def print_summary(client_names, server_names, bench_stats, transport_stats):
     print "------------------"
     print "Num Completed: %8d" % client_count
     print "   Num Failed: %8d" % client_failures
+    print "  Num Dropped: %8d" % client_drops
     print "Latency [med]: %8.3f us" % latency
     print "   Throughput: %8.3f kops" % throughput
     print "     CPU Util: %8.3f cores [%6.2f / %6.2f / %6.2f](bench, api, poll)" % (cpu_util_bench + cpu_util_bg, cpu_util_bench - cpu_util_fg, cpu_util_fg, cpu_util_bg)
