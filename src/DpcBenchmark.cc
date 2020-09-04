@@ -92,6 +92,7 @@ DpcBenchmark::DpcBenchmark(nlohmann::json bench_config, std::string server_name,
     , stats_mutex()
     , client_stats()
     , task_stats(create_task_stats_map(config.tasks))
+    , active_cycles(0)
 {
     Homa::Debug::setLogPolicy(Homa::Debug::logPolicyFromString("ERROR"));
     Roo::Debug::setLogPolicy(Roo::Debug::logPolicyFromString("ERROR"));
@@ -172,6 +173,8 @@ DpcBenchmark::dump_stats()
         nlohmann::json bench_stats_json;
         bench_stats_json["timestamp"] = timestamp;
         bench_stats_json["cycles_per_second"] = PerfUtils::Cycles::perSecond();
+
+        bench_stats_json["active_cycles"] = active_cycles.load();
 
         // Task stats
         std::vector<nlohmann::json> task_stats_json_list;
@@ -256,9 +259,17 @@ DpcBenchmark::create_task_stats_map(const BenchConfig::TaskMap& task_map)
 void
 DpcBenchmark::server_poll()
 {
+    bool idle = true;
+    uint64_t const start_tsc = PerfUtils::Cycles::rdtsc();
     for (Roo::unique_ptr<Roo::ServerTask> task = socket->receive(); task;
          task = socket->receive()) {
         dispatch(std::move(task));
+        idle = false;
+    }
+    uint64_t const stop_tsc = PerfUtils::Cycles::rdtsc();
+    if (!idle) {
+        active_cycles.fetch_add(stop_tsc - start_tsc,
+                                std::memory_order_relaxed);
     }
 }
 
@@ -268,6 +279,8 @@ DpcBenchmark::server_poll()
 void
 DpcBenchmark::client_poll()
 {
+    bool idle = true;
+    uint64_t const start_tsc = PerfUtils::Cycles::rdtsc();
     static thread_local std::random_device rd;
     static thread_local std::mt19937 gen(rd());
     static thread_local std::poisson_distribution<uint64_t> dis(cyclesPerOp);
@@ -293,6 +306,7 @@ DpcBenchmark::client_poll()
     while (it != ops.end()) {
         Op& op = *it;
         if (!op.rpc) {
+            idle = false;
             op.start_cycles = PerfUtils::Cycles::rdtsc();
             op.rpc = socket->allocRooPC();
             op.nextPhase = config.client.phases.cbegin();
@@ -301,6 +315,7 @@ DpcBenchmark::client_poll()
             if (op.rpc->checkStatus() == Roo::RooPC::Status::IN_PROGRESS) {
                 break;
             }
+            idle = false;
             const BenchConfig::Client::Phase& phase = *op.nextPhase;
             for (const BenchConfig::Request& request_config : phase.requests) {
                 for (int i = 0; i < request_config.count; ++i) {
@@ -320,6 +335,7 @@ DpcBenchmark::client_poll()
         if (op.nextPhase == config.client.phases.cend() &&
             op.rpc->checkStatus() != Roo::RooPC::Status::IN_PROGRESS) {
             op.stop_cycles = PerfUtils::Cycles::rdtsc();
+            idle = false;
             Roo::RooPC::Status status = op.rpc->checkStatus();
             op.rpc.reset();
             if (status == Roo::RooPC::Status::COMPLETED) {
@@ -339,6 +355,11 @@ DpcBenchmark::client_poll()
         }
     }
     client_running.clear();
+    uint64_t const stop_tsc = PerfUtils::Cycles::rdtsc();
+    if (!idle) {
+        active_cycles.fetch_add(stop_tsc - start_tsc,
+                                std::memory_order_relaxed);
+    }
 }
 
 Homa::Driver::Address

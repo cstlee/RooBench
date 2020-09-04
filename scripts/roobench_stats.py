@@ -112,7 +112,7 @@ def get_bench_stats(data_dir, server_name):
 
     data["elapsed_time"] = stat_diff("timestamp", start_data, end_data) / cps
     data["cycles_per_second"] = cps
-    data["active_cycles"] = 0
+    data["active_cycles"] = stat_diff("active_cycles", start_data, end_data)
     data["client_latencies"] = latencies
     data["client_count"] = end_data["client_stats"]["count"] - start_data["client_stats"]["count"]
     data["client_failures"] = end_data["client_stats"]["failures"] - start_data["client_stats"]["failures"]
@@ -131,16 +131,20 @@ def print_summary(client_names, server_names, bench_stats, transport_stats):
     client_count = 0
     client_failures = 0
     throughput = 0.0
-    cpu_util = 0.0
+    cpu_util_bench = 0.0
+    cpu_util_fg = 0.0
+    cpu_util_bg = 0.0
     for name in client_names + server_names:
         client_count += bench_stats[name]["client_count"]
         client_failures += bench_stats[name]["client_failures"]
         throughput += (bench_stats[name]["client_count"] / bench_stats[name]["elapsed_time"]) / 1000.0
+        _cps = bench_stats[name]["cycles_per_second"]
+        _duration = bench_stats[name]["elapsed_time"]
+        cpu_util_bench += bench_stats[name]["active_cycles"] / (_cps * _duration)
         _cps = transport_stats[name]["cycles_per_second"]
-        _fg_cycles = transport_stats[name]["api_cycles"]
-        _bg_cycles = transport_stats[name]["active_cycles"]
         _duration = transport_stats[name]["elapsed_time"]
-        cpu_util += (_fg_cycles + _bg_cycles) / (_duration * _cps)
+        cpu_util_fg += transport_stats[name]["api_cycles"] / (_cps * _duration)
+        cpu_util_bg += transport_stats[name]["active_cycles"] / (_cps * _duration)
     latency = 0
     latencies = get_latencies(client_names, bench_stats)
     if len(latencies) > 0:
@@ -152,7 +156,7 @@ def print_summary(client_names, server_names, bench_stats, transport_stats):
     print "   Num Failed: %8d" % client_failures
     print "Latency [med]: %8.3f us" % latency
     print "   Throughput: %8.3f kops" % throughput
-    print "     CPU Util: %8.3f cores" % cpu_util
+    print "     CPU Util: %8.3f cores [%6.2f / %6.2f / %6.2f](bench, api, poll)" % (cpu_util_bench + cpu_util_bg, cpu_util_bench - cpu_util_fg, cpu_util_fg, cpu_util_bg)
     pass
 
 def print_latency(bench_stats, client_names):

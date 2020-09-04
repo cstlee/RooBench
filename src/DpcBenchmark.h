@@ -125,6 +125,8 @@ class DpcBenchmark : public Benchmark {
     std::mutex stats_mutex;
     ClientStats client_stats;
     const std::unordered_map<int, const std::unique_ptr<TaskStats>> task_stats;
+
+    std::atomic<uint64_t> active_cycles;
 };
 
 }  // namespace RooBench
