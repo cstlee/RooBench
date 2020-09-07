@@ -318,13 +318,9 @@ RpcBenchmark::client_poll()
 
     // Check if it is time for another execution
     uint64_t timeout = nextOpTimeout.load();
-    if (timeout <= PerfUtils::Cycles::rdtsc() &&
+    if (ops.size() < 2 && timeout <= PerfUtils::Cycles::rdtsc() &&
         nextOpTimeout.compare_exchange_strong(timeout, timeout + dis(gen))) {
-        if (ops.size() < queueDepth) {
-            ops.emplace_back();
-        } else {
-            client_stats.drops++;
-        }
+        ops.emplace_back();
     }
 
     const int buf_size = 1000000;
@@ -369,9 +365,9 @@ RpcBenchmark::client_poll()
             if (!op.failed) {
                 // Update stats
                 std::lock_guard<std::mutex> lock(stats_mutex);
+                uint64_t sample = op.stop_cycles - op.start_cycles;
                 client_stats.samples.at(client_stats.sample_count &
-                                        SAMPLE_INDEX_MASK) =
-                    op.stop_cycles - op.start_cycles;
+                                        SAMPLE_INDEX_MASK) = sample;
                 client_stats.sample_count++;
                 client_stats.count++;
             } else {
@@ -379,7 +375,7 @@ RpcBenchmark::client_poll()
             }
             it = ops.erase(it);
         } else {
-            ++it;
+            break;
         }
     }
     client_running.clear();
