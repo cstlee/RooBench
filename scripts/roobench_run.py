@@ -126,7 +126,7 @@ def main(args):
     wait(tasks)
     print "          ... Done."
     
-    time.sleep(2)
+    time.sleep(4)
     
     ##### Dump stats
     SERVER_ID=1
@@ -141,7 +141,7 @@ def main(args):
     wait(tasks)
     print "          ... Done."
     
-    time.sleep(8)
+    time.sleep(10)
 
     ##### Dump stats
     SERVER_ID=1
