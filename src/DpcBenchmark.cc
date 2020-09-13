@@ -21,9 +21,9 @@
 #include <Roo/Debug.h>
 #include <Roo/Perf.h>
 
+#include <deque>
 #include <fstream>
 #include <functional>
-#include <list>
 #include <nlohmann/json.hpp>
 #include <random>
 
@@ -82,7 +82,7 @@ DpcBenchmark::DpcBenchmark(nlohmann::json bench_config, std::string server_name,
     , socket(Roo::Socket::create(transport.get()))
     , peer_list(create_peer_list(config.serverList, driver.get()))
     , unified(config.unified)
-    , queueDepth(std::lround((config.load / 250) / config.client_count) + 2)
+    , queueDepth(std::lround((config.load * 0.1) / config.client_count) + 1)
     , cyclesPerOp(PerfUtils::Cycles::fromSeconds(
           static_cast<double>(config.client_count) / config.load))
     , nextOpTimeout(0)
@@ -111,11 +111,12 @@ void
 DpcBenchmark::run_benchmark()
 {
     while (run) {
-        socket->poll();
         if (run_client) {
+            socket->poll();
             client_poll();
         }
         if (!run_client || unified) {
+            socket->poll();
             server_poll();
         }
     }
@@ -260,15 +261,11 @@ DpcBenchmark::create_task_stats_map(const BenchConfig::TaskMap& task_map)
 void
 DpcBenchmark::server_poll()
 {
-    bool idle = true;
     uint64_t const start_tsc = PerfUtils::Cycles::rdtsc();
-    for (Roo::unique_ptr<Roo::ServerTask> task = socket->receive(); task;
-         task = socket->receive()) {
+    Roo::unique_ptr<Roo::ServerTask> task = socket->receive();
+    if (task) {
         dispatch(std::move(task));
-        idle = false;
-    }
-    uint64_t const stop_tsc = PerfUtils::Cycles::rdtsc();
-    if (!idle) {
+        uint64_t const stop_tsc = PerfUtils::Cycles::rdtsc();
         active_cycles.fetch_add(stop_tsc - start_tsc,
                                 std::memory_order_relaxed);
     }
@@ -285,7 +282,7 @@ DpcBenchmark::client_poll()
     static thread_local std::random_device rd;
     static thread_local std::mt19937 gen(rd());
     static thread_local std::poisson_distribution<uint64_t> dis(cyclesPerOp);
-    static thread_local std::list<Op> ops;
+    static thread_local std::deque<Op*> ops;
 
     if (client_running.test_and_set()) {
         return;
@@ -293,29 +290,31 @@ DpcBenchmark::client_poll()
 
     // Check if it is time for another execution
     uint64_t timeout = nextOpTimeout.load();
-    if (ops.size() < 2 && timeout <= PerfUtils::Cycles::rdtsc() &&
+    if (ops.size() < 16 && timeout <= PerfUtils::Cycles::rdtsc() &&
         nextOpTimeout.compare_exchange_strong(timeout, timeout + dis(gen))) {
-        ops.emplace_back();
+        Op* op = new Op;
+        op->start_cycles = timeout;
+        ops.push_back(op);
     }
 
     const int buf_size = 1000000;
     char buf[buf_size];
 
-    auto it = ops.begin();
-    while (it != ops.end()) {
-        Op& op = *it;
-        if (!op.rpc) {
+    if (!ops.empty()) {
+        Op* op = ops.front();
+        ops.pop_front();
+
+        if (!op->rpc) {
             idle = false;
-            op.start_cycles = PerfUtils::Cycles::rdtsc();
-            op.rpc = socket->allocRooPC();
-            op.nextPhase = config.client.phases.cbegin();
+            op->rpc = socket->allocRooPC();
+            op->nextPhase = config.client.phases.cbegin();
         }
-        while (op.nextPhase != config.client.phases.cend()) {
-            if (op.rpc->checkStatus() == Roo::RooPC::Status::IN_PROGRESS) {
+        while (op->nextPhase != config.client.phases.cend()) {
+            if (op->rpc->checkStatus() == Roo::RooPC::Status::IN_PROGRESS) {
                 break;
             }
             idle = false;
-            const BenchConfig::Client::Phase& phase = *op.nextPhase;
+            const BenchConfig::Client::Phase& phase = *op->nextPhase;
             for (const BenchConfig::Request& request_config : phase.requests) {
                 for (int i = 0; i < request_config.count; ++i) {
                     WireFormat::Benchmark::Request* request =
@@ -326,21 +325,21 @@ DpcBenchmark::client_poll()
                     assert(request_config.size >=
                            sizeof(WireFormat::Benchmark::Request));
                     assert(request_config.size <= sizeof(buf));
-                    op.rpc->send(dest, buf, request_config.size);
+                    op->rpc->send(dest, buf, request_config.size);
                 }
             }
-            ++op.nextPhase;
+            ++op->nextPhase;
         }
-        if (op.nextPhase == config.client.phases.cend() &&
-            op.rpc->checkStatus() != Roo::RooPC::Status::IN_PROGRESS) {
-            op.stop_cycles = PerfUtils::Cycles::rdtsc();
+        if (op->nextPhase == config.client.phases.cend() &&
+            op->rpc->checkStatus() != Roo::RooPC::Status::IN_PROGRESS) {
+            op->stop_cycles = PerfUtils::Cycles::rdtsc();
             idle = false;
-            Roo::RooPC::Status status = op.rpc->checkStatus();
-            op.rpc.reset();
+            Roo::RooPC::Status status = op->rpc->checkStatus();
+            op->rpc.reset();
             if (status == Roo::RooPC::Status::COMPLETED) {
                 // Update stats
                 std::lock_guard<std::mutex> lock(stats_mutex);
-                uint64_t sample = op.stop_cycles - op.start_cycles;
+                uint64_t sample = op->stop_cycles - op->start_cycles;
                 client_stats.samples.at(client_stats.sample_count &
                                         SAMPLE_INDEX_MASK) = sample;
                 client_stats.sample_count++;
@@ -348,9 +347,9 @@ DpcBenchmark::client_poll()
             } else {
                 client_stats.failures++;
             }
-            it = ops.erase(it);
+            delete op;
         } else {
-            break;
+            ops.push_back(op);
         }
     }
     client_running.clear();
