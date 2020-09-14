@@ -12,15 +12,6 @@
                         "count": 1
                     }
                 ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 2,
-                        "size": 160,
-                        "count": 10
-                    }
-                ]
             }
         ],
         "servers": [
@@ -31,7 +22,13 @@
         {
             "id": 1,
             "description": "Person-knows -> [(Knows.creationData, Person.id)...]",
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 2,
+                    "size": 160,
+                    "count": 10
+                }
+            ],
             "responses": [
                 {
                     "size": 6400,

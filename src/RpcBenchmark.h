@@ -22,6 +22,7 @@
 
 #include <array>
 #include <atomic>
+#include <list>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
@@ -89,9 +90,19 @@ class RpcBenchmark : public Benchmark {
         std::atomic<int> count;
     };
     struct Op {
+        struct Task {
+            Task(int id, SimpleRpc::unique_ptr<SimpleRpc::Rpc>&& rpc)
+                : id(id)
+                , rpc(std::move(rpc))
+            {}
+
+            int id;
+            SimpleRpc::unique_ptr<SimpleRpc::Rpc> rpc;
+        };
+
         Op()
             : started(false)
-            , rpcs()
+            , tasks()
             , nextCheckIndex(0)
             , nextPhase()
             , start_cycles(0)
@@ -99,10 +110,8 @@ class RpcBenchmark : public Benchmark {
             , failed(false)
         {}
 
-        bool phaseEnded();
-
         bool started;
-        std::vector<SimpleRpc::unique_ptr<SimpleRpc::Rpc>> rpcs;
+        std::list<Task> tasks;
         std::size_t nextCheckIndex;
         std::vector<BenchConfig::Client::Phase>::const_iterator nextPhase;
         uint64_t start_cycles;

@@ -242,31 +242,6 @@ RpcBenchmark::stop()
 }
 
 /**
- * Helper method to returns true if all rpcs have completed or failed; othewise
- * returns false.
- */
-bool
-RpcBenchmark::Op::phaseEnded()
-{
-    while (nextCheckIndex < rpcs.size()) {
-        SimpleRpc::Rpc* rpc = rpcs.at(nextCheckIndex).get();
-        SimpleRpc::Rpc::Status status = rpc->checkStatus();
-        if (status == SimpleRpc::Rpc::Status::IN_PROGRESS) {
-            return false;
-        } else if (status == SimpleRpc::Rpc::Status::FAILED) {
-            failed = true;
-            break;
-        } else {
-            rpc->wait();
-            ++nextCheckIndex;
-        }
-    }
-    rpcs.clear();
-    nextCheckIndex = 0;
-    return true;
-}
-
-/**
  * Helper static method to initialize the task_stats map.
  */
 std::unordered_map<int, const std::unique_ptr<RpcBenchmark::TaskStats>>
@@ -334,10 +309,47 @@ RpcBenchmark::client_poll()
             op->started = true;
             op->nextPhase = config.client.phases.cbegin();
         }
-        while (op->nextPhase != config.client.phases.cend()) {
-            if (!op->phaseEnded() || op->failed) {
-                break;
+        if (!op->tasks.empty()) {
+            auto it = op->tasks.begin();
+            while (it != op->tasks.end()) {
+                SimpleRpc::Rpc* rpc = it->rpc.get();
+                SimpleRpc::Rpc::Status status = rpc->checkStatus();
+                if (status == SimpleRpc::Rpc::Status::IN_PROGRESS) {
+                    ++it;
+                } else if (status == SimpleRpc::Rpc::Status::FAILED) {
+                    op->failed = true;
+                    op->tasks.clear();
+                    break;
+                } else {
+                    idle = false;
+                    const BenchConfig::Task& task_config =
+                        config.tasks.at(it->id);
+                    for (const BenchConfig::Request& request_config :
+                         task_config.requests) {
+                        for (int i = 0; i < request_config.count; ++i) {
+                            SimpleRpc::unique_ptr<SimpleRpc::Rpc> rpc =
+                                socket->allocRpc();
+                            WireFormat::Benchmark::Request* request =
+                                reinterpret_cast<
+                                    WireFormat::Benchmark::Request*>(buf);
+                            request->common.opcode =
+                                WireFormat::Benchmark::opcode;
+                            request->taskType = request_config.taskId;
+                            Homa::Driver::Address dest = selectServer();
+                            assert(request_config.size >=
+                                   sizeof(WireFormat::Benchmark::Request));
+                            assert(request_config.size <= sizeof(buf));
+                            rpc->send(dest, buf, request_config.size);
+                            op->tasks.emplace_back(request_config.taskId,
+                                                   std::move(rpc));
+                        }
+                    }
+                    it = op->tasks.erase(it);
+                }
             }
+        } else if (op->failed) {
+            op->tasks.clear();
+        } else if (op->nextPhase != config.client.phases.cend()) {
             idle = false;
             const BenchConfig::Client::Phase& phase = *op->nextPhase;
             for (const BenchConfig::Request& request_config : phase.requests) {
@@ -353,12 +365,13 @@ RpcBenchmark::client_poll()
                            sizeof(WireFormat::Benchmark::Request));
                     assert(request_config.size <= sizeof(buf));
                     rpc->send(dest, buf, request_config.size);
-                    op->rpcs.push_back(std::move(rpc));
+                    op->tasks.emplace_back(request_config.taskId,
+                                           std::move(rpc));
                 }
             }
             ++op->nextPhase;
         }
-        if (op->nextPhase == config.client.phases.cend() && op->phaseEnded()) {
+        if (op->nextPhase == config.client.phases.cend() && op->tasks.empty()) {
             op->stop_cycles = PerfUtils::Cycles::rdtsc();
             idle = false;
             if (!op->failed) {

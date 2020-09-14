@@ -12,15 +12,6 @@
                         "count": 1
                     }
                 ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 2,
-                        "size": 16,
-                        "count": 1
-                    }
-                ]
             }
         ],
         "servers": [
@@ -31,7 +22,13 @@
         {
             "id": 1,
             "description": "Message-hasCreator -> Person.id",
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 2,
+                    "size": 16,
+                    "count": 1
+                }
+            ],
             "responses": [
                 {
                     "size": 8,

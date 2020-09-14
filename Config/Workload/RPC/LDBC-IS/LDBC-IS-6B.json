@@ -12,38 +12,6 @@
                         "count": 1
                     }
                 ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 1,
-                        "size": 16,
-                        "count": 1
-                    }
-                ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 2,
-                        "size": 16,
-                        "count": 1
-                    },
-                    {
-                        "task_id": 3,
-                        "size": 16,
-                        "count": 1
-                    }
-                ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 4,
-                        "size": 16,
-                        "count": 1
-                    }
-                ]
             }
         ],
         "servers": [
@@ -54,7 +22,13 @@
         {
             "id": 0,
             "description": "Comment-replyOf -> Message.id",
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 1,
+                    "size": 16,
+                    "count": 1
+                }
+            ],
             "responses": [
                 {
                     "size": 8,
@@ -68,7 +42,18 @@
         {
             "id": 1,
             "description": "Message-containerOf -> Forum.id",
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 2,
+                    "size": 16,
+                    "count": 1
+                },
+                {
+                    "task_id": 3,
+                    "size": 16,
+                    "count": 1
+                }
+            ],
             "responses": [
                 {
                     "size": 8,
@@ -96,7 +81,13 @@
         {
             "id": 3,
             "description": "Forum-hasModerator -> Person.id",
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 4,
+                    "size": 16,
+                    "count": 1
+                }
+            ],
             "responses": [
                 {
                     "size": 8,

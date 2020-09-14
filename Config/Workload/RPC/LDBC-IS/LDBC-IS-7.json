@@ -17,34 +17,6 @@
                         "count": 1
                     }
                 ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 3,
-                        "size": 16,
-                        "count": 1
-                    },
-                    {
-                        "task_id": 4,
-                        "size": 16,
-                        "count": 10
-                    },
-                    {
-                        "task_id": 5,
-                        "size": 16,
-                        "count": 10
-                    }
-                ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 6,
-                        "size": 16,
-                        "count": 10
-                    }
-                ]
             }
         ],
         "servers": [
@@ -55,7 +27,18 @@
         {
             "id": 1,
             "description": "Message-replyOf -> [Comment.id ...]",
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 4,
+                    "size": 16,
+                    "count": 10
+                },
+                {
+                    "task_id": 5,
+                    "size": 16,
+                    "count": 10
+                }
+            ],
             "responses": [
                 {
                     "size": 80,
@@ -69,7 +52,13 @@
         {
             "id": 2,
             "description": "Message-hasCreator -> Person.id",
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 3,
+                    "size": 16,
+                    "count": 1
+                }
+            ],
             "responses": [
                 {
                     "size": 8,
@@ -120,7 +109,13 @@
         {
             "id": 5,
             "description": "Comment-hasCreator -> Person.id",
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 6,
+                    "size": 16,
+                    "count": 1
+                }
+            ],
             "responses": [
                 {
                     "size": 8,

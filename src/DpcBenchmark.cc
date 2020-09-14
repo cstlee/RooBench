@@ -309,10 +309,9 @@ DpcBenchmark::client_poll()
             op->rpc = socket->allocRooPC();
             op->nextPhase = config.client.phases.cbegin();
         }
-        while (op->nextPhase != config.client.phases.cend()) {
-            if (op->rpc->checkStatus() == Roo::RooPC::Status::IN_PROGRESS) {
-                break;
-            }
+        if (op->rpc->checkStatus() == Roo::RooPC::Status::IN_PROGRESS) {
+            // nothing to do
+        } else if (op->nextPhase != config.client.phases.cend()) {
             idle = false;
             const BenchConfig::Client::Phase& phase = *op->nextPhase;
             for (const BenchConfig::Request& request_config : phase.requests) {

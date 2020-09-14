@@ -12,38 +12,6 @@
                         "count": 1
                     }
                 ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 2,
-                        "size": 16,
-                        "count": 10
-                    },
-                    {
-                        "task_id": 3,
-                        "size": 16,
-                        "count": 10
-                    }
-                ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 4,
-                        "size": 16,
-                        "count": 10
-                    }
-                ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 5,
-                        "size": 16,
-                        "count": 10
-                    }
-                ]
             }
         ],
         "servers": [
@@ -54,7 +22,18 @@
         {
             "id": 1,
             "description": "_hasCreator -> [Message.id ...]",
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 2,
+                    "size": 16,
+                    "count": 10
+                },
+                {
+                    "task_id": 3,
+                    "size": 16,
+                    "count": 10
+                }
+            ],
             "responses": [
                 {
                     "size": 80,
@@ -91,7 +70,13 @@
         {
             "id": 3,
             "description": "Message-replyOf -> Post.id",
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 4,
+                    "size": 16,
+                    "count": 1
+                }
+            ],
             "responses": [
                 {
                     "size": 8,
@@ -114,7 +99,13 @@
         {
             "id": 4,
             "description": "Post-hasCreator -> Person.id",
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 5,
+                    "size": 16,
+                    "count": 1
+                }
+            ],
             "responses": [
                 {
                     "size": 8,
