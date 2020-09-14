@@ -113,8 +113,6 @@ TEST_F(ServerTaskImplTest, reply)
 
     char buffer[1024];
 
-    EXPECT_FALSE(task->response);
-
     EXPECT_CALL(transport, alloc())
         .WillOnce(
             Return(ByMove(Homa::unique_ptr<Homa::OutMessage>(&outMessage))));
@@ -122,13 +120,9 @@ TEST_F(ServerTaskImplTest, reply)
                 append(An<const void*>(), Eq(sizeof(Proto::RequestHeader))));
     EXPECT_CALL(outMessage, append(Eq(buffer), Eq(sizeof(buffer))));
     EXPECT_CALL(outMessage, send(Eq(replyAddress)));
+    EXPECT_CALL(outMessage, release());
 
     task->reply(buffer, sizeof(buffer));
-
-    ASSERT_TRUE(task->response);
-    EXPECT_EQ(&outMessage, task->response.get());
-
-    EXPECT_CALL(outMessage, release());
 }
 
 TEST_F(ServerTaskImplTest, destroy)

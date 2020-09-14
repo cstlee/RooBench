@@ -60,9 +60,6 @@ class ServerTaskImpl : public ServerTask {
     /// Address of the client that sent the original request; the reply should
     /// be sent back to this address.
     Homa::Driver::Address const replyAddress;
-
-    /// Response message.
-    Homa::unique_ptr<Homa::OutMessage> response;
 };
 
 }  // namespace SimpleRpc

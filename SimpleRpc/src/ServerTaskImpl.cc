@@ -40,7 +40,6 @@ ServerTaskImpl::ServerTaskImpl(SocketImpl* socket,
     , request(std::move(request))
     , replyAddress(socket->transport->getDriver()->getAddress(
           &requestHeader->replyAddress))
-    , response()
 {
     this->request->strip(sizeof(Proto::RequestHeader));
 }
@@ -72,7 +71,6 @@ ServerTaskImpl::reply(const void* response, size_t length)
     message->append(response, length);
     Perf::counters.tx_message_bytes.add(sizeof(Proto::ResponseHeader) + length);
     message->send(replyAddress, Homa::OutMessage::Options::NO_RETRY);
-    this->response = std::move(message);
     Perf::counters.server_api_cycles.add(timer.split());
 }
 
