@@ -290,11 +290,15 @@ DpcBenchmark::client_poll()
 
     // Check if it is time for another execution
     uint64_t timeout = nextOpTimeout.load();
-    if (ops.size() < 16 && timeout <= PerfUtils::Cycles::rdtsc() &&
+    if (timeout <= PerfUtils::Cycles::rdtsc() &&
         nextOpTimeout.compare_exchange_strong(timeout, timeout + dis(gen))) {
-        Op* op = new Op;
-        op->start_cycles = timeout;
-        ops.push_back(op);
+        if (ops.size() < 10) {
+            Op* op = new Op;
+            op->start_cycles = timeout;
+            ops.push_back(op);
+        } else {
+            client_stats.drops++;
+        }
     }
 
     const int buf_size = 1000000;
