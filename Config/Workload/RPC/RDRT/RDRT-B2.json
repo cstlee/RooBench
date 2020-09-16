@@ -6,30 +6,7 @@
             {
                 "requests": [
                     {
-                        "task_id": 1,
-                        "size": 100,
-                        "count": 1
-                    }
-                ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 0,
-                        "size": 100,
-                        "count": 1
-                    },
-                    {
-                        "task_id": 1,
-                        "size": 100,
-                        "count": 1
-                    }
-                ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 0,
+                        "task_id": 2,
                         "size": 100,
                         "count": 1
                     }
@@ -42,8 +19,38 @@
     },
     "tasks": [
         {
+            "id": 2,
+            "requests": [
+                {
+                    "task_id": 1,
+                    "size": 100,
+                    "count": 1
+                },
+                {
+                    "task_id": 0,
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "responses": [
+                {
+                    "size": 100,
+                    "count": 1
+                }
+            ],
+            "servers": [
+                4
+            ]
+        },
+        {
             "id": 1,
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 0,
+                    "size": 100,
+                    "count": 1
+                }
+            ],
             "responses": [
                 {
                     "size": 100,

@@ -11,15 +11,6 @@
                         "count": 1
                     }
                 ]
-            },
-            {
-                "requests": [
-                    {
-                        "task_id": 0,
-                        "size": 100,
-                        "count": 1
-                    }
-                ]
             }
         ],
         "servers": [
@@ -29,7 +20,13 @@
     "tasks": [
         {
             "id": 1,
-            "requests": [],
+            "requests": [
+                {
+                    "task_id": 0,
+                    "size": 100,
+                    "count": 1
+                }
+            ],
             "responses": [
                 {
                     "size": 100,
